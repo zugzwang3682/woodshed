@@ -1,0 +1,2464 @@
+<title>Woodshed</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2316120E'/%3E%3Cg stroke='%236E6558' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='M6.5 3.5v25M25.5 3.5v25'/%3E%3C/g%3E%3Cg stroke='%23585044' stroke-width='1.3' opacity='.75'%3E%3Cpath d='M1 9h30M1 16h30M1 23h30'/%3E%3C/g%3E%3Ccircle cx='16' cy='16' r='6.4' fill='%23E9963F'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+
+<style>
+:root{
+  --ground:#16120E;
+  --panel:#1F1915;
+  --panel2:#2A231C;
+  --sunk:#110E0B;
+  --line:#3A3128;
+  --fretwire:#6E6558;
+  --stringcol:#585044;
+  --ink:#EFE7DA;
+  --ink2:#A99C89;
+  --ink3:#6F6455;
+  --amber:#E9963F;
+  --teal:#59B0A0;
+  --rose:#CE5F72;
+  --bone:#C3B9A7;
+  --live:#FFD27A;
+  --focus:#E9963F;
+
+  --f-disp:"Instrument Serif",Georgia,"Times New Roman",serif;
+  --f-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:var(--f-ui);
+  font-size:14px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:3px}
+
+.wrap{max-width:1560px;margin:0 auto;padding:22px 24px 56px;display:flex;flex-direction:column;gap:18px}
+
+/* ---------- header ---------- */
+.masthead{display:flex;align-items:flex-end;justify-content:space-between;gap:28px;flex-wrap:wrap;
+  border-bottom:1px solid var(--line);padding-bottom:14px}
+.brand{display:flex;align-items:baseline;gap:14px}
+.brand h1{font-family:var(--f-disp);font-weight:400;font-size:40px;line-height:1;margin:0;letter-spacing:.01em}
+.brand .sub{font-size:12px;color:var(--ink3);letter-spacing:.14em;text-transform:uppercase}
+
+.keypick{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:5px}
+.field>label{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+select,.btn{
+  background:var(--panel2);border:1px solid var(--line);color:var(--ink);
+  border-radius:5px;padding:7px 10px;cursor:pointer;transition:border-color .13s,background .13s}
+select:hover,.btn:hover{border-color:var(--fretwire)}
+select{appearance:none;padding-right:26px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--ink2) 50%),linear-gradient(135deg,var(--ink2) 50%,transparent 50%);
+  background-position:calc(100% - 14px) 52%,calc(100% - 9px) 52%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+
+/* ---------- derived theory strip ---------- */
+.derived{display:grid;grid-template-columns:auto 1fr;gap:0 22px;align-items:start;
+  background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:13px 16px}
+.derived+.derived{margin-top:-10px}
+.dlabel{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);padding-top:6px;white-space:nowrap}
+.drow{display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 6px}
+.pitch{font-family:var(--f-mono);font-size:13px;background:var(--panel2);border:1px solid var(--line);
+  border-radius:4px;padding:4px 9px;display:flex;align-items:baseline;gap:7px}
+.pitch b{font-weight:600;letter-spacing:.02em}
+.pitch i{font-style:normal;font-size:11px;color:var(--ink3)}
+.pitch.is-root{border-color:var(--amber);color:var(--amber)}
+.pitch.is-root i{color:var(--amber);opacity:.7}
+.chip-chord{font-family:var(--f-mono);font-size:12.5px;background:var(--panel2);border:1px solid var(--line);
+  border-radius:4px;padding:4px 9px;display:flex;flex-direction:column;line-height:1.35;min-width:60px}
+.chip-chord b{font-weight:600;font-size:13px}
+.chip-chord span{font-size:10.5px;color:var(--ink3);letter-spacing:.06em}
+.chip-chord.act{border-color:var(--teal);color:var(--teal)}
+.chip-chord.act span{color:var(--teal);opacity:.75}
+
+/* ---------- main ---------- */
+.main{display:grid;grid-template-columns:296px minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:1080px){.main{grid-template-columns:1fr}}
+
+.rail{display:flex;flex-direction:column;gap:14px;
+  position:sticky;top:14px;max-height:calc(100vh - 28px);overflow-y:auto;padding-right:3px;
+  scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.rail::-webkit-scrollbar{width:8px}
+.rail::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+.rail::-webkit-scrollbar-track{background:transparent}
+/* Must follow the .rail block above: same specificity, so source order is
+   what actually unsticks it. Sticky here pinned the rail and let the board
+   scroll underneath, showing through the gaps between cards. */
+@media (max-width:1080px){
+  .rail{position:static;max-height:none;overflow:visible;padding-right:0}
+  .wrap{padding:14px 14px 40px;gap:14px}
+  .masthead{gap:14px}
+  .brand h1{font-size:30px}
+  .keypick{gap:8px}
+  .derived{padding:10px 12px}
+  .caged .cnote{min-width:0;max-width:none;margin-left:0;flex-basis:100%}
+  .transport{gap:10px}
+  .bpm{min-width:150px}
+}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 15px 16px;
+  display:flex;flex-direction:column;gap:12px}
+.card>h2{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin:0;
+  font-weight:600;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.card>h2:hover{color:var(--ink2)}
+.card>h2:hover .chev{border-left-color:var(--ink2)}
+.chev{width:0;height:0;flex:none;border-left:4.5px solid var(--ink3);
+  border-top:3.5px solid transparent;border-bottom:3.5px solid transparent}
+.card:not(.closed)>h2 .chev{transform:rotate(90deg)}
+.secSum{margin-left:auto;font-family:var(--f-mono);font-size:9.5px;letter-spacing:.02em;
+  text-transform:none;font-weight:400;color:var(--ink3);opacity:.9;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:158px}
+.card:not(.closed) .secSum{opacity:0}
+.secBody{display:flex;flex-direction:column;gap:12px}
+.card.closed>.secBody{display:none}
+@media (prefers-reduced-motion:no-preference){
+  .chev{transition:transform .16s ease}
+  .secSum{transition:opacity .16s ease}
+}
+
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.preset{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:5px 9px;
+  font-size:11.5px;color:var(--ink2);cursor:pointer;text-align:left;transition:.13s}
+.preset:hover{border-color:var(--fretwire);color:var(--ink)}
+.preset.on{border-color:var(--amber);color:var(--amber);background:#2A2018}
+
+.ctl{display:flex;flex-direction:column;gap:6px}
+.ctl>label{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.ctl select{width:100%}
+
+.seg{display:flex;border:1px solid var(--line);border-radius:5px;overflow:hidden;background:var(--sunk)}
+.seg button{flex:1;background:transparent;border:0;border-right:1px solid var(--line);padding:6px 4px;
+  font-size:11.5px;color:var(--ink3);cursor:pointer;transition:.13s;white-space:nowrap}
+.seg button:last-child{border-right:0}
+.seg button:hover{color:var(--ink)}
+.seg button.on{background:var(--panel2);color:var(--amber)}
+
+.tones{display:flex;gap:4px}
+.tone{flex:1;min-width:0;background:var(--sunk);border:1px solid var(--line);border-radius:5px;padding:9px 0;
+  font-family:var(--f-mono);font-size:13px;color:var(--ink3);cursor:pointer;position:relative;transition:.13s}
+.tone:hover{border-color:var(--fretwire)}
+.tone.on{border-color:var(--teal);color:var(--teal);background:#182521}
+.tone .ord{position:absolute;top:2px;right:4px;font-size:9px;opacity:.85}
+.hint{font-size:11px;color:var(--ink3);line-height:1.5;margin:0}
+.hint code{font-family:var(--f-mono);font-size:10.5px;color:var(--ink2)}
+textarea#tabIn{width:100%;resize:vertical;background:var(--sunk);color:var(--ink2);
+  border:1px solid var(--line);border-radius:5px;padding:8px 9px;
+  font-family:var(--f-mono);font-size:10.5px;line-height:1.45;white-space:pre;overflow-x:auto}
+textarea#tabIn::placeholder{color:var(--ink3);opacity:.7}
+textarea#tabIn:focus{outline:none;border-color:var(--fretwire)}
+.tabrow{display:flex;gap:6px}
+.tabrow .btn{flex:1;font-size:11.5px;padding:6px 8px;text-align:center}
+#tabCtl{display:flex;flex-direction:column;gap:12px}
+#trkCtl{display:flex;flex-direction:column;gap:12px}
+#drop{border:1px dashed var(--line);border-radius:6px;padding:12px;display:flex;
+  flex-direction:column;align-items:center;gap:6px;transition:.13s}
+#drop.over{border-color:var(--amber);background:#241B14}
+#drop .hint{margin:0}
+#drop .btn{font-size:11.5px;padding:6px 12px}
+.trkbar{height:4px;border-radius:2px;background:var(--sunk);overflow:hidden;border:1px solid var(--line)}
+.trkbar i{display:block;height:100%;background:var(--amber);width:0;transition:width .2s linear}
+
+.range{display:flex;align-items:center;gap:9px}
+.range input[type=range]{flex:1;accent-color:var(--amber);background:transparent}
+.range input[type=range]:disabled{opacity:.3;cursor:not-allowed}
+.range output{font-family:var(--f-mono);font-size:12px;color:var(--ink2);min-width:52px;text-align:right;
+  font-variant-numeric:tabular-nums}
+
+.switch{display:flex;align-items:center;gap:9px;cursor:pointer;font-size:12.5px;color:var(--ink2)}
+.switch input{appearance:none;width:32px;height:18px;border-radius:9px;background:var(--sunk);
+  border:1px solid var(--line);position:relative;cursor:pointer;transition:.15s;flex:none}
+.switch input::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;
+  background:var(--ink3);transition:.15s}
+.switch input:checked{border-color:var(--amber);background:#2A2018}
+.switch input:checked::after{left:16px;background:var(--amber)}
+
+/* ---------- board ---------- */
+.stage{display:flex;flex-direction:column;gap:14px;min-width:0}
+.boardwrap{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 4px 4px;overflow-x:auto}
+svg.board{display:block}
+
+.fretnum{font-family:var(--f-mono);font-size:10.5px;fill:var(--ink3)}
+.fretnum.mark{fill:var(--ink2)}
+.opennm{font-family:var(--f-mono);font-size:10px;fill:var(--ink3)}
+.nut{fill:var(--bone)}
+.fretline{stroke:var(--fretwire);stroke-width:1.5}
+.stringline{stroke:var(--stringcol)}
+.inlay{fill:var(--line)}
+
+.nd{cursor:default}
+.nd .bg{fill:var(--panel2);stroke:var(--line);stroke-width:1}
+.nd .tx{font-family:var(--f-mono);font-size:10.5px;font-weight:500;text-anchor:middle;dominant-baseline:central;
+  fill:var(--ink3);pointer-events:none}
+.nd.inscale .bg{fill:#2B241D;stroke:var(--fretwire)}
+.nd.inscale .tx{fill:var(--bone)}
+.nd.root .bg{fill:var(--amber);stroke:var(--amber)}
+.nd.root .tx{fill:#1A1209;font-weight:600}
+.nd.ct .bg{fill:#1E3833;stroke:var(--teal)}
+.nd.ct .tx{fill:var(--teal)}
+.nd.hang .bg{fill:#2E1B21;stroke:var(--rose)}
+.nd.hang .tx{fill:var(--rose)}
+.nd.dimmed{opacity:.24}
+.nd.hidden{display:none}
+.nd .ring{fill:none;stroke:var(--live);stroke-width:0;opacity:0}
+.nd.instep .ring{stroke-width:1.6;opacity:.55}
+.nd.live .bg{fill:var(--live);stroke:var(--live)}
+.nd.live .tx{fill:#1A1209;font-weight:600}
+.nd.live .ring{stroke-width:2.2;opacity:1}
+.nd.outside .bg{fill:#33191F;stroke:var(--rose);stroke-dasharray:2.5 2}
+.nd.outside .tx{fill:var(--rose)}
+.nd.arrive .bg{stroke:var(--teal);stroke-width:2}
+.nd.leave .bg{stroke:var(--rose);stroke-width:2;stroke-dasharray:3 2}
+
+@media (prefers-reduced-motion:no-preference){
+  .nd .bg,.nd .tx,.nd .ring{transition:fill .09s linear,stroke .09s linear,opacity .09s linear,stroke-width .09s linear}
+}
+
+/* ---------- transport ---------- */
+.transport{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:11px 14px}
+.tbtn{background:var(--panel2);border:1px solid var(--line);border-radius:5px;width:40px;height:34px;
+  display:grid;place-items:center;cursor:pointer;transition:.13s}
+.tbtn:hover{border-color:var(--fretwire)}
+.tbtn.primary{border-color:var(--amber);color:var(--amber);background:#2A2018;width:52px}
+.tbtn svg{display:block}
+.bpm{display:flex;align-items:center;gap:10px;min-width:230px;flex:1}
+.readout{font-family:var(--f-mono);font-size:12px;color:var(--ink3);letter-spacing:.04em;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.readout b{color:var(--ink);font-weight:500}
+
+/* ---------- filmstrip ---------- */
+.strip{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+  display:flex;flex-direction:column;gap:8px;min-width:0}
+[hidden]{display:none !important}
+.strip h2{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin:0;font-weight:600}
+
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--ink3);align-items:center}
+.lg{display:flex;align-items:center;gap:6px}
+.sw{width:11px;height:11px;border-radius:50%;border:1px solid}
+.sw.root{background:var(--amber);border-color:var(--amber)}
+.sw.ct{background:#1E3833;border-color:var(--teal)}
+.sw.sc{background:#2B241D;border-color:var(--fretwire)}
+.sw.hang{background:#2E1B21;border-color:var(--rose)}
+.sw.out{background:#33191F;border-color:var(--rose);border-style:dashed}
+
+.hinge{display:flex;flex-direction:column;gap:5px}
+.hrow{font-family:var(--f-mono);font-size:11.5px;color:var(--ink2);display:flex;gap:8px;align-items:baseline}
+.hrow .mv{color:var(--rose)}
+.hrow .st{color:var(--ink3)}
+.hrow em{font-style:normal;color:var(--teal)}
+
+/* ---------- CAGED ---------- */
+.caged{display:flex;align-items:stretch;gap:8px;background:var(--panel);border:1px solid var(--line);
+  border-radius:8px;padding:10px 12px;flex-wrap:wrap}
+.caged .clab{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);
+  align-self:center;margin-right:4px;font-weight:600}
+.shape{background:var(--sunk);border:1px solid var(--line);border-radius:6px;padding:6px 10px;
+  cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;transition:.13s;min-width:58px}
+.shape:hover{border-color:var(--fretwire)}
+.shape b{font-family:var(--f-disp);font-size:21px;line-height:1;color:var(--ink2);font-weight:400}
+.shape span{font-family:var(--f-mono);font-size:9.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.shape.on{border-color:var(--amber);background:#2A2018}
+.shape.near{border-color:var(--fretwire)}
+.shape.near b{color:var(--ink)}
+.shape.on b{color:var(--amber)}
+.shape.on span{color:var(--amber);opacity:.75}
+.caged .cnote{font-size:11px;color:var(--ink3);align-self:center;margin-left:auto;
+  min-width:230px;max-width:340px;line-height:1.45}
+
+/* ---------- sequence + tab ---------- */
+.seqframe{display:flex;gap:0;min-width:0;align-items:stretch}
+.gutter{display:flex;flex-direction:column;flex:none;padding-right:7px;border-right:1px solid var(--line);
+  margin-right:5px}
+.gcell{height:17px;display:flex;align-items:center;justify-content:flex-end;font-family:var(--f-mono);
+  font-size:10px;color:var(--ink3)}
+.gcell.gdeg{height:22px;font-size:9px;letter-spacing:.1em;text-transform:uppercase}
+.cols{display:flex;gap:0;overflow-x:auto;padding-bottom:5px;scroll-behavior:smooth;min-width:0}
+.col{flex:none;width:26px;display:flex;flex-direction:column}
+.col.grp{box-shadow:inset 1px 0 0 var(--fretwire)}
+.col.barline{box-shadow:inset 1px 0 0 var(--ink3)}
+.col.chordstart{box-shadow:inset 2px 0 0 var(--amber)}
+.chip{height:22px;display:grid;place-items:center;font-family:var(--f-mono);font-size:11px;
+  color:var(--ink3);font-variant-numeric:tabular-nums}
+.chip.anchor{color:var(--amber)}
+.chip.approach{color:var(--rose)}
+.chip.outside{color:var(--rose);font-style:italic}
+.cell{height:17px;position:relative;display:grid;place-items:center;font-family:var(--f-mono);
+  font-size:10.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.cell::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:var(--line)}
+.cell em{position:relative;z-index:1;background:var(--panel);padding:0 3px;font-style:normal}
+.col.cur .chip{background:var(--live);color:#1A1209;font-weight:600;border-radius:3px}
+.col.cur .cell em{color:var(--live);font-weight:600}
+.col:hover .cell em{color:var(--ink)}
+
+/* ---------- position bracket + vamp ---------- */
+.brk rect{fill:none;stroke:var(--amber);stroke-width:1.6;rx:7}
+.brk text{font-family:var(--f-mono);font-size:10px;fill:var(--amber);letter-spacing:.06em}
+.brk.ghost rect{stroke:var(--ink3);stroke-dasharray:4 3;stroke-width:1.2}
+.brk.ghost text{fill:var(--ink3)}
+.brk.off{display:none}
+@media (prefers-reduced-motion:no-preference){
+  .brk rect,.brk text{transition:x .26s cubic-bezier(.4,0,.2,1),width .26s cubic-bezier(.4,0,.2,1)}
+}
+.ribbon{display:flex;gap:5px;align-items:center}
+.rchord{font-family:var(--f-mono);font-size:11.5px;padding:4px 10px;border-radius:4px;
+  border:1px solid var(--line);background:var(--sunk);color:var(--ink3);display:flex;gap:7px;align-items:baseline}
+.rchord i{font-style:normal;font-size:9.5px;opacity:.8}
+.rchord.on{border-color:var(--amber);color:var(--amber);background:#2A2018}
+.rchord.borrowed{border-style:dashed}
+.hrow em.ct{color:var(--amber)}
+.hrow em{color:var(--ink2)}
+</style>
+
+<div class="wrap">
+
+  <div class="masthead">
+    <div class="brand">
+      <h1>Woodshed</h1>
+      <div class="sub">Fretboard&nbsp;/&nbsp;Pattern&nbsp;Engine</div>
+    </div>
+    <div class="keypick">
+      <div class="field"><label for="root">Root</label><select id="root"></select></div>
+      <div class="field"><label for="scale">Scale</label><select id="scale"></select></div>
+      <div class="field"><label for="cmpMode">Compare against</label><select id="cmpMode"></select></div>
+      <div class="field"><label for="cmpRoot">Compare root</label><select id="cmpRoot"></select></div>
+    </div>
+  </div>
+
+  <div class="derived">
+    <div class="dlabel">Scale tones</div><div class="drow" id="scaleRow"></div>
+    <div class="dlabel">Diatonic harmony</div><div class="drow" id="chordRow"></div>
+  </div>
+
+  <div class="main">
+
+    <div class="rail">
+
+      <div class="card">
+        <h2>Backing track</h2>
+        <div id="drop">
+          <input type="file" id="trkFile" accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg,.flac" hidden>
+          <button class="btn" id="trkPick">Choose an MP3</button>
+          <p class="hint">or drop a file here</p>
+        </div>
+        <p class="hint" id="trkInfo">Nothing loaded.</p>
+        <div id="trkCtl" hidden>
+          <label class="switch"><input type="checkbox" id="trkOn" checked><span>Play the track</span></label>
+          <div class="ctl">
+            <label for="trkVol">Track level</label>
+            <div class="range"><input type="range" id="trkVol" min="0" max="100" value="80"><output id="trkVolOut">80</output></div>
+          </div>
+          <div class="ctl">
+            <label>Downbeat</label>
+            <div class="seg" id="trkNudge">
+              <button data-v="-1">&#8592; beat</button>
+              <button data-v="-0.01">&#8722;10ms</button>
+              <button data-v="0.01">+10ms</button>
+              <button data-v="1">beat &#8594;</button>
+            </div>
+            <p class="hint" id="trkGrid"></p>
+          </div>
+          <div class="ctl">
+            <label>Tempo</label>
+            <div class="seg" id="trkHalf">
+              <button data-v="0.5">&#189;</button>
+              <button data-v="1" class="on">as found</button>
+              <button data-v="2">&#215;2</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Tab</h2>
+        <textarea id="tabIn" rows="5" spellcheck="false"
+          placeholder="Paste ASCII tab here, e.g.&#10;e|-----------------|&#10;B|-----------------|&#10;G|-------5---7-----|&#10;D|---5-------------|"></textarea>
+        <div class="tabrow">
+          <button class="btn" id="tabLoad">Read it</button>
+          <button class="btn" id="tabClear">Clear</button>
+        </div>
+        <p class="hint" id="tabInfo">Nothing loaded.</p>
+        <div id="tabCtl" hidden>
+          <label class="switch"><input type="checkbox" id="tabOn"><span>Play this instead of the drill</span></label>
+          <div class="ctl">
+            <label for="tabTr">Transpose</label>
+            <div class="range">
+              <input type="range" id="tabTr" min="-12" max="12" value="0">
+              <output id="tabTrOut">0</output>
+            </div>
+          </div>
+          <div class="ctl">
+            <label>Fingering</label>
+            <div class="seg" id="tabFing">
+              <button data-v="written" class="on">As written</button>
+              <button data-v="box">In the box</button>
+            </div>
+            <p class="hint" id="tabFingHint"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Drills</h2>
+        <div class="presets" id="presets"></div>
+      </div>
+
+      <div class="card">
+        <h2>Pattern</h2>
+
+        <div class="ctl">
+          <label>Pattern</label>
+          <div class="seg" id="ptype">
+            <button data-v="tones" class="on">Chord tones</button>
+            <button data-v="run">Runs</button>
+          </div>
+        </div>
+
+        <div class="ctl" id="runCtl" hidden>
+          <label>Run length</label>
+          <div class="seg" id="runLen">
+            <button data-v="3">3</button><button data-v="4" class="on">4</button>
+            <button data-v="5">5</button><button data-v="6">6</button>
+          </div>
+          <div class="seg" id="runDir">
+            <button data-v="down" class="on">Descending</button>
+            <button data-v="up">Ascending</button>
+          </div>
+          <p class="hint" id="runHint"></p>
+        </div>
+
+        <div class="ctl" id="toneCtl">
+          <label>Scale steps off each note, in order</label>
+          <div class="tones" id="tones"></div>
+          <p class="hint" id="toneHint"></p>
+        </div>
+
+        <div class="ctl">
+          <label for="startOn">Start on</label>
+          <select id="startOn"></select>
+        </div>
+
+        <div class="ctl">
+          <label for="endOn">Resolve to</label>
+          <select id="endOn"></select>
+        </div>
+
+        <div class="ctl">
+          <label>Direction</label>
+          <div class="seg" id="dir">
+            <button data-v="up" class="on">Up</button>
+            <button data-v="down">Down</button>
+            <button data-v="updown">Up &amp; down</button>
+          </div>
+        </div>
+
+        <div class="ctl">
+          <label>Chromatic approach</label>
+          <div class="seg" id="appr">
+            <button data-v="none" class="on">Off</button>
+            <button data-v="below">Below</button>
+            <button data-v="above">Above</button>
+            <button data-v="alt">Alt</button>
+          </div>
+        </div>
+
+        <div class="ctl">
+          <label>Approach applies to</label>
+          <div class="seg" id="apprScope">
+            <button data-v="group" class="on">Each group</button>
+            <button data-v="note">Every note</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Fingering</h2>
+        <div class="ctl">
+          <div class="seg" id="pos">
+            <button data-v="inpos" class="on">In position</button>
+            <button data-v="shift">Moving shape</button>
+          </div>
+          <p class="hint" id="posHint"></p>
+        </div>
+        <div class="ctl">
+          <label>String set</label>
+          <div class="seg" id="sset">
+            <button data-v="all" class="on">All</button>
+            <button data-v="123">1&#183;2&#183;3</button>
+            <button data-v="234">2&#183;3&#183;4</button>
+            <button data-v="345">3&#183;4&#183;5</button>
+            <button data-v="456">4&#183;5&#183;6</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <label for="winLo">Position window</label>
+          <div class="range">
+            <input type="range" id="winLo" min="0" max="22" value="0">
+            <output id="winOut">frets 0&#8211;5</output>
+          </div>
+          <div class="range">
+            <input type="range" id="winSpan" min="3" max="12" value="5">
+            <output id="spanOut">span 5</output>
+          </div>
+        </div>
+        <div class="ctl">
+          <label for="octs" id="octLabel">Octaves</label>
+          <div class="range">
+            <input type="range" id="octs" min="1" max="3" value="1">
+            <output id="octOut">1</output>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Vamp</h2>
+        <div class="ctl">
+          <label for="prog">Progression</label>
+          <select id="prog"></select>
+        </div>
+        <div class="ctl">
+          <label>Over the changes</label>
+          <div class="seg" id="solo">
+            <button data-v="parallel" class="on">Parallel</button>
+            <button data-v="adaptive">Adaptive</button>
+          </div>
+          <p class="hint" id="soloHint"></p>
+        </div>
+        <div class="ctl" id="ptransCtl">
+          <label>Moving the shape</label>
+          <div class="seg" id="ptrans">
+            <button data-v="exact" class="on">Exact shape</button>
+            <button data-v="diatonic">Follow the chord</button>
+          </div>
+          <p class="hint" id="ptransHint"></p>
+        </div>
+        <label class="switch"><input type="checkbox" id="fitBars"><span>Fit each chord to its bars</span></label>
+      </div>
+
+      <div class="card">
+        <h2>Sound</h2>
+        <label class="switch"><input type="checkbox" id="sndNotes" checked><span>Play the notes</span></label>
+        <label class="switch"><input type="checkbox" id="sndClick"><span>Metronome click</span></label>
+        <label class="switch"><input type="checkbox" id="sndDrone"><span>Root drone</span></label>
+        <div class="ctl">
+          <label for="vol">Volume</label>
+          <div class="range"><input type="range" id="vol" min="0" max="100" value="70"><output id="volOut">70</output></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Display</h2>
+        <label class="switch"><input type="checkbox" id="showDeg" checked><span>Degrees, not note names</span></label>
+        <label class="switch"><input type="checkbox" id="landing"><span>Colour by landing vs hanging</span></label>
+        <label class="switch"><input type="checkbox" id="onlyPat"><span>Show only pattern notes</span></label>
+        <label class="switch"><input type="checkbox" id="loopOn" checked><span>Loop the pattern</span></label>
+      </div>
+
+    </div>
+
+    <div class="stage">
+
+      <div class="caged" id="caged" role="group" aria-label="CAGED position"></div>
+      <div class="boardwrap"><svg class="board" id="board"></svg></div>
+
+      <div class="transport">
+        <button class="tbtn primary" id="play" title="Play / pause (space)" aria-label="Play or pause">
+          <svg width="15" height="15" viewBox="0 0 15 15" aria-hidden="true"><path id="playIcon" d="M3 1.5 L13 7.5 L3 13.5 Z" fill="currentColor"/></svg>
+        </button>
+        <button class="tbtn" id="stop" title="Stop" aria-label="Stop">
+          <svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><rect x="1.5" y="1.5" width="10" height="10" fill="currentColor"/></svg>
+        </button>
+        <div class="bpm">
+          <input type="range" id="bpm" min="30" max="220" value="72" aria-label="Tempo">
+          <output class="readout" id="bpmOut"><b>72</b> bpm</output>
+        </div>
+        <div class="field"><label for="subdiv">Feel</label>
+          <select id="subdiv">
+            <option value="1">Quarters</option>
+            <option value="2" selected>Eighths</option>
+            <option value="3">Eighth triplets</option>
+            <option value="4">Sixteenths</option>
+          </select>
+        </div>
+        <div class="ribbon" id="ribbon"></div>
+        <div class="readout" id="counter">step <b>&#8212;</b> / &#8212;</div>
+      </div>
+
+      <div class="strip">
+        <h2>Sequence &amp; tab</h2>
+        <div class="seqframe">
+          <div class="gutter" id="gutter"></div>
+          <div class="cols" id="steps"></div>
+        </div>
+        <div class="legend">
+          <span class="lg"><span class="sw root"></span>root</span>
+          <span class="lg"><span class="sw ct"></span>chord tone</span>
+          <span class="lg"><span class="sw sc"></span>scale tone</span>
+          <span class="lg"><span class="sw hang"></span>hanging (2 &#183; 6)</span>
+          <span class="lg"><span class="sw out"></span>outside the key</span>
+        </div>
+      </div>
+
+      <div class="strip" id="hingeCard" hidden>
+        <h2 id="hingeTitle">What moves between the two</h2>
+        <div class="hinge" id="hinge"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================ THEORY ============================ */
+
+const LETTERS=["C","D","E","F","G","A","B"];
+const NAT=[0,2,4,5,7,9,11];
+const MAJREF=[0,2,4,5,7,9,11];       // semitones of major-scale degrees 1..7
+
+function accStr(a){
+  if(a===0)return"";
+  if(a===1)return"\u266f"; if(a===2)return"\u266f\u266f";
+  if(a===-1)return"\u266d"; if(a===-2)return"\u266d\u266d";
+  return a>0?"+"+a:String(a);
+}
+function degLabel(deg,semi){
+  let a=semi-MAJREF[deg-1];
+  if(a>6)a-=12; if(a<-6)a+=12;
+  return accStr(a)+deg;
+}
+
+const ROOTS=[
+  {n:"C",l:0,a:0},{n:"C\u266f",l:0,a:1},{n:"D\u266d",l:1,a:-1},{n:"D",l:1,a:0},
+  {n:"E\u266d",l:2,a:-1},{n:"E",l:2,a:0},{n:"F",l:3,a:0},{n:"F\u266f",l:3,a:1},
+  {n:"G\u266d",l:4,a:-1},{n:"G",l:4,a:0},{n:"A\u266d",l:5,a:-1},{n:"A",l:5,a:0},
+  {n:"B\u266d",l:6,a:-1},{n:"B",l:6,a:0}
+];
+const rootPc=r=>((NAT[r.l]+r.a)%12+12)%12;
+
+// [semitone, degreeNumber, letterStep?]  letterStep defaults to degreeNumber-1
+const SCALES={
+  ionian:{n:"Ionian (major)",d:[[0,1],[2,2],[4,3],[5,4],[7,5],[9,6],[11,7]]},
+  dorian:{n:"Dorian",d:[[0,1],[2,2],[3,3],[5,4],[7,5],[9,6],[10,7]]},
+  phrygian:{n:"Phrygian",d:[[0,1],[1,2],[3,3],[5,4],[7,5],[8,6],[10,7]]},
+  lydian:{n:"Lydian",d:[[0,1],[2,2],[4,3],[6,4],[7,5],[9,6],[11,7]]},
+  mixolydian:{n:"Mixolydian",d:[[0,1],[2,2],[4,3],[5,4],[7,5],[9,6],[10,7]]},
+  aeolian:{n:"Aeolian (nat. minor)",d:[[0,1],[2,2],[3,3],[5,4],[7,5],[8,6],[10,7]]},
+  locrian:{n:"Locrian",d:[[0,1],[1,2],[3,3],[5,4],[6,5],[8,6],[10,7]]},
+  melmin:{n:"Melodic minor",d:[[0,1],[2,2],[3,3],[5,4],[7,5],[9,6],[11,7]]},
+  lydom:{n:"Lydian dominant",d:[[0,1],[2,2],[4,3],[6,4],[7,5],[9,6],[10,7]]},
+  altered:{n:"Altered",d:[[0,1],[1,2],[3,3],[4,4],[6,5],[8,6],[10,7]]},
+  harmmin:{n:"Harmonic minor",d:[[0,1],[2,2],[3,3],[5,4],[7,5],[8,6],[11,7]]},
+  majpent:{n:"Major pentatonic",d:[[0,1],[2,2],[4,3],[7,5],[9,6]]},
+  minpent:{n:"Minor pentatonic",d:[[0,1],[3,3],[5,4],[7,5],[10,7]]},
+  blues:{n:"Blues",d:[[0,1],[3,3],[5,4],[6,5,4],[7,5],[10,7]]}
+};
+
+function buildContext(rootIdx,scaleKey){
+  const r=ROOTS[rootIdx], pc=rootPc(r), def=SCALES[scaleKey];
+  const notes=def.d.map(function(e){
+    const semi=e[0], deg=e[1], ls=(e.length>2?e[2]:deg-1);
+    const li=(r.l+ls)%7;
+    let need=(pc+semi)%12, acc=need-NAT[li];
+    if(acc>6)acc-=12; if(acc<-6)acc+=12;
+    return {semi:semi,deg:deg,pc:need,name:LETTERS[li]+accStr(acc),label:degLabel(deg,semi)};
+  });
+  return {root:r,rootPc:pc,scaleKey:scaleKey,scaleName:def.n,notes:notes,
+          semis:notes.map(function(n){return n.semi}),
+          pcs:notes.map(function(n){return n.pc}),
+          heptatonic:notes.length===7};
+}
+
+const TRIADQ={"0,4,7":["",  "maj"],"0,3,7":["m","min"],"0,3,6":["\u00b0","dim"],"0,4,8":["+","aug"]};
+const SEVQ={"0,4,7,11":["maj7","maj"],"0,4,7,10":["7","dom"],"0,3,7,10":["m7","min"],
+  "0,3,6,10":["m7\u266d5","dim"],"0,3,6,9":["\u00b07","dim"],"0,3,7,11":["mMaj7","min"],
+  "0,4,8,11":["maj7\u266f5","aug"],"0,4,8,10":["7\u266f5","aug"]};
+
+function diatonic(ctx){
+  if(!ctx.heptatonic)return[];
+  const N=7, out=[];
+  for(let i=0;i<N;i++){
+    const iv=[0,2,4,6].map(function(o){
+      let s=ctx.semis[(i+o)%N]-ctx.semis[i];
+      while(s<0)s+=12;
+      return s;
+    });
+    const tri=TRIADQ[iv.slice(0,3).join(",")];
+    const sev=SEVQ[iv.join(",")];
+    const q=tri?tri[1]:(sev?sev[1]:"?");
+    const base=ctx.notes[i];
+    let rn=degLabel(base.deg,base.semi).replace(/\d$/,"");
+    const num=["I","II","III","IV","V","VI","VII"][base.deg-1];
+    rn+= (q==="min"||q==="dim") ? num.toLowerCase() : num;
+    if(q==="dim")rn+="\u00b0"; if(q==="aug")rn+="+";
+    out.push({idx:i,name:base.name+(tri?tri[0]:"?"),sev:base.name+(sev?sev[0]:""),roman:rn,quality:q});
+  }
+  return out;
+}
+
+/* ============================ FRETBOARD ============================ */
+
+const OPEN=[40,45,50,55,59,64];     // low E .. high E  (index 0 = 6th string)
+const FRETS=24;
+const STRINGSETS={all:[0,1,2,3,4,5],"123":[3,4,5],"234":[2,3,4],"345":[1,2,3],"456":[0,1,2]};
+const INLAY=[3,5,7,9,15,17,19,21], DOUBLE=[12,24];
+
+const GEO={x0:52,fw:47,y0:26,sh:31,pad:22};
+GEO.w=GEO.x0+FRETS*GEO.fw+GEO.pad;
+GEO.h=GEO.y0+5*GEO.sh+40;
+const fretX=f=>f===0?GEO.x0-16:GEO.x0+(f-0.5)*GEO.fw;   // marker centre
+const lineX=f=>GEO.x0+f*GEO.fw;
+const strY=s=>GEO.y0+(5-s)*GEO.sh;                      // s=0 low E at bottom
+
+/* ============================ CAGED ============================
+
+   The five movable major-chord shapes tile the neck in the fixed cycle
+   C -> A -> G -> E -> D ascending. Each shape's box sits a known number of
+   frets from the tonic's position on the 6th string, so once you know where
+   the root is, all five boxes fall out of one subtraction.
+   Offsets verified against the open shapes: in C major the boxes land at
+   C=0, A=3, G=5, E=7, D=10 -- exactly the CAGED order.               */
+
+const CAGED_OFF={C:4,A:7,G:9,E:-1,D:2};
+const CAGED_ORDER=["C","A","G","E","D"];
+const CAGED_SPAN=4;
+
+// Every playable position of one shape, low to high. The cycle repeats every
+// octave, so a 24-fret neck carries a full C-A-G-E-D turn and most of another.
+function cagedBoxes(rootPc,shape){
+  const r6=(((rootPc-4)%12)+12)%12;          // lowest fret of the root on string 6
+  const raw=r6+CAGED_OFF[shape];
+  const out=[];
+  for(let k=-2;k<=3;k++){
+    const c=raw+12*k;
+    const lo=(c===-1?0:c);                   // -1 is the open-position box
+    // The top shape on a 24-fret neck runs past the last fret. It is still a
+    // real, playable position, so keep it clamped rather than dropping it.
+    if(c>=-1&&lo>=0&&lo+2<=FRETS)
+      out.push({lo:lo,hi:Math.min(FRETS,lo+CAGED_SPAN),shape:shape});
+  }
+  return out;
+}
+function cagedBox(rootPc,shape){
+  const b=cagedBoxes(rootPc,shape);
+  return b.length?b[0]:{lo:0,hi:CAGED_SPAN,shape:shape};
+}
+function allCagedBoxes(rootPc){
+  const out=[];
+  CAGED_ORDER.forEach(function(k){out.push.apply(out,cagedBoxes(rootPc,k))});
+  return out.sort(function(a,b){return a.lo-b.lo});
+}
+function activeShape(rootPc,lo){
+  if(S.winSpan!==CAGED_SPAN)return null;
+  const b=allCagedBoxes(rootPc).filter(function(x){return x.lo===lo});
+  return b.length?b[0].shape:null;
+}
+function nearestShape(rootPc,lo){
+  let best=null;
+  allCagedBoxes(rootPc).forEach(function(x){
+    const d=Math.abs(x.lo-lo);
+    if(!best||d<best.d)best={k:x.shape,d:d,lo:x.lo};
+  });
+  return best;
+}
+// Which chord the bar is describing: stopped, that is chord one; playing, it
+// is whatever is sounding. In adaptive the box holds still but the SHAPE
+// changes underneath it, and that is the thing worth showing.
+function cagedSubject(){
+  const c=S.chordInfo?S.chordInfo[curChord()]:null;
+  return c?{pc:c.ctx.rootPc,name:c.name,lo:c.lo,vamp:true}
+          :{pc:ctx.rootPc,name:ctx.root.n,lo:S.winLo,vamp:false};
+}
+function renderCaged(){
+  const sub=cagedSubject();
+  const act=activeShape(sub.pc,sub.lo);
+  const near=act?null:nearestShape(sub.pc,sub.lo);
+  const boxes=allCagedBoxes(sub.pc);
+  const here=sub.lo+"-"+Math.min(FRETS,sub.lo+S.winSpan);
+  let note;
+  if(act) note="Position "+here+" is the <b>"+act+"</b> shape of "+sub.name+
+               (sub.vamp?"." : ". Pick another and the pattern rebuilds in that box.");
+  else if(near) note="Position "+here+" sits "+near.d+" fret"+(near.d===1?"":"s")+
+               " off the <b>"+near.k+"</b> shape of "+sub.name+".";
+  else note="Position "+here+" is not a CAGED box. Pick a shape to snap to one.";
+  $("caged").innerHTML='<div class="clab">CAGED'+(sub.vamp?" &#183; "+sub.name:"")+'</div>'+
+    boxes.map(function(x){
+      const on=(x.lo===sub.lo&&S.winSpan===CAGED_SPAN);
+      const cls="shape"+(on?" on":(near&&!act&&near.lo===x.lo?" near":""));
+      return '<button class="'+cls+'" data-shape="'+x.shape+'" data-lo="'+x.lo+'">'+
+             "<b>"+x.shape+"</b><span>"+x.lo+"-"+x.hi+"</span></button>";
+    }).join("")+'<div class="cnote">'+note+"</div>";
+}
+
+/* ============================ THE VAMP ============================
+
+   Two different questions were both being called "adaptive vs parallel":
+     - FINGERING (S.pos): in position, vs moving the shape up the neck.
+     - OVER THE CHANGES (S.solo) -- the real one:
+         parallel = move the shape to the new chord's root. The hand travels,
+                    the intervals are identical, the ear hears the idea again.
+         adaptive = the hand stays; you re-target the new chord's tones from
+                    where you already are.
+   Both chords draw on ONE note pool (each chord's scale is a mode of the
+   parent), so the only thing that differs between the strategies is whether
+   the box moves -- which is exactly what the bracket on the neck shows.  */
+
+const PROGS={
+  off:{n:"None (one chord)",ch:[0],bars:[4]},
+  I_bVII:{n:"I - \u266dVII",ch:[0,10],bars:[2,2]},
+  I_IV:{n:"I - IV",ch:[0,5],bars:[2,2]},
+  I_V:{n:"I - V",ch:[0,7],bars:[2,2]},
+  I_vi:{n:"I - vi",ch:[0,9],bars:[2,2]},
+  ii_V:{n:"ii - V",ch:[2,7],bars:[2,2]},
+  IV_I:{n:"IV - I",ch:[5,0],bars:[2,2]},
+  blues12:{n:"12-bar blues",ch:[0,5,0,7,5,0],bars:[4,2,2,1,1,2]},
+  blues12q:{n:"12-bar, quick change",ch:[0,5,0,5,0,7,5,0],bars:[1,1,2,2,2,1,1,2]}
+};
+
+// Re-root the scale on one of its own notes, keeping every spelling intact.
+function rotateContext(base,idx){
+  const N=base.notes.length, root=base.notes[idx];
+  const rl=LETTERS.indexOf(root.name.charAt(0));
+  const notes=[];
+  for(let j=0;j<N;j++){
+    const n=base.notes[(idx+j)%N];
+    const semi=(((n.semi-root.semi)%12)+12)%12;
+    const li=LETTERS.indexOf(n.name.charAt(0));
+    const deg=((((li-rl)%7)+7)%7)+1;
+    notes.push({semi:semi,deg:deg,pc:n.pc,name:n.name,label:degLabel(deg,semi)});
+  }
+  return {root:{n:root.name},rootPc:root.pc,scaleName:base.scaleName,notes:notes,
+          semis:notes.map(function(x){return x.semi}),
+          pcs:notes.map(function(x){return x.pc}),heptatonic:N===7};
+}
+const ROMAN_SEMI=["I","\u266dII","II","\u266dIII","III","IV",
+                  "\u266dV","V","\u266dVI","VI","\u266dVII","VII"];
+function romanForOffset(off,q){
+  let r=ROMAN_SEMI[(((off%12)+12)%12)];
+  if(q==="min"||q==="dim")r=r.toLowerCase();
+  if(q==="dim")r+="\u00b0";
+  if(q==="aug")r+="+";
+  return r;
+}
+function rootIdxForPc(pc,preferFlat){
+  const cands=[];
+  for(let i=0;i<ROOTS.length;i++)if(rootPc(ROOTS[i])===pc)cands.push(i);
+  if(!cands.length)return 0;
+  for(let j=0;j<cands.length;j++){
+    const a=ROOTS[cands[j]].a;
+    if(preferFlat?(a<0):(a>0))return cands[j];
+  }
+  return cands[0];
+}
+function chordCtxFor(off){
+  const pc=(((ctx.rootPc+off)%12)+12)%12, i=ctx.pcs.indexOf(pc);
+  if(i>=0)return rotateContext(ctx,i);
+  // A BORROWED chord: its root is not a note of this key. That is ordinary
+  // harmony (bVII in a major key, IV under lydian), not an error -- so give
+  // it the same scale type on its own root rather than dropping it and
+  // silently collapsing the progression back to a single pattern.
+  const flat=ctx.notes.some(function(n){return n.name.indexOf("\u266d")>=0});
+  return buildContext(rootIdxForPc(pc,flat),S.scaleKey);
+}
+// Shortest move to the new chord: A -> G travels down 2 frets, never up 10.
+function nearestShift(d){d=((d%12)+12)%12;return d>6?d-12:d}
+function windowFor(off,base){
+  if(S.solo!=="parallel")return S.winLo;
+  let lo=S.winLo+nearestShift(off-base);
+  if(lo<0)lo+=12;
+  if(lo+S.winSpan>FRETS)lo-=12;
+  return Math.max(0,Math.min(FRETS-S.winSpan,lo));
+}
+function progActive(){return S.prog!=="off"&&PROGS[S.prog].ch.length>1}
+function curChord(){
+  const st=S.seq[S.cur];
+  return (st&&st.chord!=null)?st.chord:0;
+}
+function chordTone(cc,pc){
+  const j=cc.pcs.indexOf(pc);
+  if(j<0)return false;
+  const use7=S.tones.indexOf("7")>=0;
+  return j===0||j===2||j===4||(use7&&j===6);
+}
+function computeChords(){
+  if(!progActive()){S.chordInfo=null;return}
+  const chs=PROGS[S.prog].ch, base=chs[0], dia=diatonic(ctx);
+  const use7=S.tones.indexOf("7")>=0;
+  const info=chs.map(function(off){
+    const pc=(((ctx.rootPc+off)%12)+12)%12, i=ctx.pcs.indexOf(pc);
+    const cc=chordCtxFor(off);
+    let name,roman;
+    if(i>=0&&dia[i]){
+      name=use7?dia[i].sev:dia[i].name; roman=dia[i].roman;
+    }else{
+      const d2=cc?diatonic(cc):[];
+      name=d2[0]?(use7?d2[0].sev:d2[0].name):(cc?cc.root.n:pcName(pc));
+      roman=romanForOffset(off,d2[0]?d2[0].quality:"maj");
+    }
+    return {off:off,idx:i,ctx:cc,lo:windowFor(off,base),
+            name:name,roman:roman,borrowed:(i<0)};
+  }).filter(function(c){return c.ctx});
+  S.chordInfo=info.length>1?info:null;
+}
+// "and then land on the 1" -- one closing note, fingered nearest the hand.
+function appendResolve(steps,cx,winLo){
+  if(S.endOn==="off"||!steps.length)return steps;
+  const last=steps[steps.length-1];
+  if(!last.p)return steps;
+  const cands=positionNotes(cx,winLo).filter(function(n){return n.di===+S.endOn});
+  if(!cands.length)return steps;
+  let best=null,bd=1e9;
+  cands.forEach(function(n){
+    const d=Math.abs(n.f-last.p.f)+1.3*Math.abs(n.s-last.p.s);
+    if(d<bd){bd=d;best=n}
+  });
+  steps.push({role:"anchor",group:last.group+1,chord:last.chord,resolve:true,
+              midi:best.midi,p:{s:best.s,f:best.f},di:best.di,
+              label:S.showDeg?cx.notes[best.di].label:cx.notes[best.di].name});
+  return steps;
+}
+
+// Repeat or trim a chord's drill so it lands exactly on the bar line.
+function fitToBars(steps,bars){
+  const want=Math.max(1,bars*S.beatsPerBar*S.subdiv);
+  if(!steps.length)return steps;
+  const out=[];
+  for(let i=0;i<want;i++)out.push(Object.assign({},steps[i%steps.length]));
+  return out;
+}
+
+/* ============================ ASCII TAB ============================
+
+   Ultimate Guitar and friends can't be fetched from a page -- CORS forbids
+   it and their terms forbid it -- but the text is one paste away, so that is
+   the input. Once a lick is (string, fret) events, transposing and
+   re-fingering it fall straight out of the placement engine already here. */
+
+const TUNE_PC={c:0,d:2,e:4,f:5,g:7,a:9,b:11};
+
+function looksLikeTab(l){
+  const body=l.replace(/^\s*[A-Ga-g][#b]?\s*\|?/,"");
+  return (body.match(/-/g)||[]).length>=4;
+}
+
+function parseAsciiTab(text){
+  const raw=String(text).replace(/\r/g,"").split("\n");
+  const blocks=[];
+  let i=0;
+  while(i<raw.length){
+    if(!looksLikeTab(raw[i])){i++;continue}
+    let j=i;
+    while(j<raw.length&&looksLikeTab(raw[j]))j++;
+    const run=raw.slice(i,j);
+    for(let k=0;k+6<=run.length;k+=6)blocks.push(run.slice(k,k+6));
+    i=j;
+  }
+  if(!blocks.length)return null;
+
+  const events=[];
+  let tuning=OPEN.slice(), sawLabels=false, hiToLo=true;
+
+  blocks.forEach(function(block){
+    // Prefix widths differ between lines ("e|" vs "Eb|"), so slice each line
+    // at its own body start -- that is what keeps the columns aligned.
+    const labels=[], bodies=[];
+    block.forEach(function(line){
+      const m=/^\s*([A-Ga-g][#b]?)?\s*\|?/.exec(line);
+      labels.push(m&&m[1]?m[1]:"");
+      bodies.push(line.slice(m?m[0].length:0));
+    });
+    if(labels.some(function(x){return x})){
+      sawLabels=true;
+      const first=(labels[0]||"").toLowerCase(), last=(labels[5]||"").toLowerCase();
+      if(first==="e"&&last==="e")hiToLo=(labels[0]===labels[0].toLowerCase());
+      else if(TUNE_PC[first]!==undefined&&TUNE_PC[last]!==undefined)
+        hiToLo=true;
+      tuning=tuningFromLabels(labels,hiToLo,tuning);
+    }
+
+    const width=Math.max.apply(null,bodies.map(function(b){return b.length}));
+    const eaten=bodies.map(function(){return{}});
+    let pendingBar=false;
+
+    for(let c=0;c<width;c++){
+      const notes=[];
+      for(let li=0;li<6;li++){
+        const ch=bodies[li].charAt(c);
+        if(ch==="|"){pendingBar=true;continue}
+        if(ch<"0"||ch>"9"||eaten[li][c])continue;
+        let num=ch;
+        const nx=bodies[li].charAt(c+1);
+        if(nx>="0"&&nx<="9"){num+=nx;eaten[li][c+1]=true}
+        notes.push({s:hiToLo?(5-li):li,f:parseInt(num,10)});
+      }
+      if(notes.length){
+        events.push({notes:notes,bar:pendingBar});
+        pendingBar=false;
+      }
+    }
+  });
+
+  if(!events.length)return null;
+  return {events:events,tuning:tuning,labelled:sawLabels,
+          blocks:blocks.length,notes:events.reduce(function(a,e){return a+e.notes.length},0)};
+}
+
+// Read the string labels so drop-D, Eb standard and DADGAD import at pitch.
+function tuningFromLabels(labels,hiToLo,fallback){
+  const t=fallback.slice();
+  labels.forEach(function(lab,li){
+    const m=/^([A-Ga-g])([#b]?)$/.exec((lab||"").trim());
+    if(!m)return;
+    let pc=TUNE_PC[m[1].toLowerCase()];
+    if(m[2]==="#")pc+=1;
+    if(m[2]==="b")pc-=1;
+    pc=((pc%12)+12)%12;
+    const s=hiToLo?(5-li):li, std=OPEN[s];
+    t[s]=pc+12*Math.round((std-pc)/12);
+  });
+  return t;
+}
+
+// Re-finger a set of pitches inside the current box, folding by octaves when
+// the written register does not fit -- which is what you actually do when you
+// move a lick to another position.
+function placeMidis(midis,prev){
+  const lo=S.winLo, hi=Math.min(FRETS,lo+S.winSpan), strs=allowedStrings();
+  const out=[];
+  midis.forEach(function(m){
+    const pc=(((m%12)+12)%12), cands=[];
+    strs.forEach(function(st){
+      for(let f=lo;f<=hi;f++){
+        const mm=OPEN[st]+f;
+        if((((mm%12)+12)%12)===pc)cands.push({s:st,f:f,midi:mm});
+      }
+    });
+    if(!cands.length)return;
+    let best=null,bd=1e9;
+    cands.forEach(function(c){
+      const d=prev?(Math.abs(c.f-prev.f)+1.3*Math.abs(c.s-prev.s)):c.midi;
+      if(d<bd){bd=d;best=c}
+    });
+    if(best){out.push(best);prev=best}
+  });
+  return out;
+}
+
+function tabSteps(){
+  const T=S.tab;
+  if(!T)return[];
+  const tr=S.tabTranspose, out=[];
+  let prev=null;
+  T.events.forEach(function(ev,i){
+    let stack;
+    if(S.tabFing==="box"){
+      stack=placeMidis(ev.notes.map(function(n){return T.tuning[n.s]+n.f+tr}),prev);
+    }else{
+      stack=ev.notes.map(function(n){
+        let f=n.f+tr;
+        while(f<0)f+=12;
+        while(f>FRETS)f-=12;
+        return {s:n.s,f:f,midi:T.tuning[n.s]+f};
+      });
+    }
+    if(!stack.length)return;
+    stack.sort(function(a,b){return a.midi-b.midi});
+    prev=stack[stack.length-1];
+    const p=stack[0], pc=(((p.midi%12)+12)%12), di=ctx.pcs.indexOf(pc);
+    out.push({role:"anchor",group:0,chord:0,bar:ev.bar,stack:stack,
+              p:{s:p.s,f:p.f},midi:p.midi,outside:di<0,
+              label:di>=0?(S.showDeg?ctx.notes[di].label:ctx.notes[di].name):pcName(p.midi)});
+  });
+  return out;
+}
+
+function buildSequence(){
+  if(S.tabOn&&S.tab){S.chordInfo=null;return tabSteps()}
+  computeChords();
+  const gen=function(cx,lo,onRoot){
+    return S.pos==="shift" ? placeParallel(buildSteps(cx),cx,lo)
+                           : buildAdaptive(cx,lo,onRoot);
+  };
+  if(!S.chordInfo)return appendResolve(gen(ctx,S.winLo,false),ctx,S.winLo);
+
+  const bars=S.fitBars?PROGS[S.prog].bars:null;
+  const base=S.chordInfo[0];
+  // The unfitted first chord is what a parallel transpose copies, so a chord
+  // with a different bar count still gets the whole shape before trimming.
+  const firstRaw=appendResolve(gen(base.ctx,base.lo,true),base.ctx,base.lo);
+  let first=(bars?fitToBars(firstRaw,bars[0]):firstRaw);
+  first.forEach(function(st){st.chord=0});
+  const out=first.slice();
+
+  for(let ci=1;ci<S.chordInfo.length;ci++){
+    const c=S.chordInfo[ci];
+    let steps;
+    if(S.solo==="parallel"&&S.ptrans==="exact"){
+      // Move the hand and take what comes -- including notes outside the key.
+      const d=nearestShift(c.off-base.off);
+      steps=[];
+      firstRaw.forEach(function(st){
+        if(!st.p)return;
+        let f=st.p.f+d;
+        while(f<0)f+=12;
+        while(f>FRETS)f-=12;
+        const midi=OPEN[st.p.s]+f, pc=(((midi%12)+12)%12);
+        const j=c.ctx.pcs.indexOf(pc);
+        steps.push({role:st.role,group:st.group,midi:midi,p:{s:st.p.s,f:f},
+                    outside:(j<0&&st.role!=="approach"),
+                    label:(st.role==="approach"||j<0)?pcName(midi)
+                          :(S.showDeg?c.ctx.notes[j].label:c.ctx.notes[j].name)});
+      });
+    }else{
+      // Re-derive in the new box so the arpeggio takes the chord's own
+      // quality: a minor chord gets a minor arpeggio.
+      steps=appendResolve(gen(c.ctx,c.lo,true),c.ctx,c.lo);
+    }
+    if(bars)steps=fitToBars(steps,bars[ci]);
+    steps.forEach(function(st){st.chord=ci});
+    out.push.apply(out,steps);
+  }
+  return out;
+}
+
+function boxGeom(lo,sp){
+  const x=(lo===0?GEO.x0-30:lineX(lo-1));
+  return {x:x,w:Math.max(24,lineX(Math.min(FRETS,lo+sp))-x)};
+}
+function paintBrackets(){
+  const nowG=document.getElementById("brNow"), ghG=document.getElementById("brGhost");
+  if(!nowG||!ghG)return;
+  if(!S.chordInfo){nowG.classList.add("off");ghG.classList.add("off");return}
+  const ci=curChord(), a=S.chordInfo[ci], b=S.chordInfo[(ci+1)%S.chordInfo.length];
+  const y=strY(5)-15, hgt=5*GEO.sh+30;
+  function put(g,box,label){
+    const r=g.querySelector("rect"), t=g.querySelector("text");
+    r.setAttribute("x",box.x); r.setAttribute("y",y);
+    r.setAttribute("width",box.w); r.setAttribute("height",hgt);
+    t.setAttribute("x",box.x+8); t.setAttribute("y",y-5);
+    t.textContent=label; g.classList.remove("off");
+  }
+  put(nowG,boxGeom(a.lo,S.winSpan),a.name+"   "+a.roman);
+  if(b.lo!==a.lo)put(ghG,boxGeom(b.lo,S.winSpan),b.name); else ghG.classList.add("off");
+}
+// Everything the sounding chord governs, refreshed in one place.
+function syncChord(force){
+  const nc=curChord();
+  if(!force&&nc===S.lastChord)return;
+  S.lastChord=nc;
+  paintBrackets(); renderRibbon(); renderCaged(); paint();
+  if(AUD.drone)droneOn();
+}
+function renderRibbon(){
+  if(!S.chordInfo){$("ribbon").innerHTML="";return}
+  const ci=curChord();
+  $("ribbon").innerHTML=S.chordInfo.map(function(c,i){
+    const bs=(S.fitBars&&PROGS[S.prog].bars)?(" &#183; "+PROGS[S.prog].bars[i]+"b"):"";
+    return '<div class="rchord'+(i===ci?" on":"")+(c.borrowed?" borrowed":"")+
+           '" title="'+(c.borrowed?"Borrowed - root is outside the key":"")+
+           '"><b>'+c.name+"</b><i>"+c.roman+bs+"</i></div>";
+  }).join("");
+}
+
+/* ============================ BEAT DETECTION ============================
+
+   Spotify and YouTube hand a page no audio at all, so their beat grids can
+   only ever be tapped in by hand. A local file is different: decodeAudioData
+   gives real samples, and from there the grid is computable.
+
+   Pipeline: downmix and decimate to ~11 kHz -> spectral flux onset envelope
+   -> autocorrelation for a coarse period (weighted toward ordinary tempi, so
+   the usual half/double-time error resolves sensibly) -> a fine comb search
+   that fits period AND phase together -> pick which of the four beats is the
+   downbeat by which one carries the most onset weight.                    */
+
+const TRK={buffer:null,src:null,gain:null,on:true,vol:.8,
+           bpm:0,downbeat:0,conf:0,name:"",mult:1};
+
+function fft(re,im){
+  const n=re.length;
+  for(let i=1,j=0;i<n;i++){
+    let bit=n>>1;
+    for(;j&bit;bit>>=1)j^=bit;
+    j^=bit;
+    if(i<j){let t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t}
+  }
+  for(let len=2;len<=n;len<<=1){
+    const ang=-2*Math.PI/len, wr=Math.cos(ang), wi=Math.sin(ang), half=len>>1;
+    for(let i=0;i<n;i+=len){
+      let cr=1,ci=0;
+      for(let k=0;k<half;k++){
+        const ur=re[i+k], ui=im[i+k];
+        const vr=re[i+k+half]*cr-im[i+k+half]*ci;
+        const vi=re[i+k+half]*ci+im[i+k+half]*cr;
+        re[i+k]=ur+vr; im[i+k]=ui+vi;
+        re[i+k+half]=ur-vr; im[i+k+half]=ui-vi;
+        const ncr=cr*wr-ci*wi; ci=cr*wi+ci*wr; cr=ncr;
+      }
+    }
+  }
+}
+
+function monoDecimate(buf,target){
+  const ch=buf.numberOfChannels, sr=buf.sampleRate;
+  const factor=Math.max(1,Math.round(sr/target));
+  const outN=Math.floor(buf.length/factor);
+  const out=new Float32Array(outN), data=[];
+  for(let c=0;c<ch;c++)data.push(buf.getChannelData(c));
+  for(let i=0;i<outN;i++){
+    let acc=0;
+    for(let k=0;k<factor;k++){
+      const idx=i*factor+k;
+      let sm=0;
+      for(let c=0;c<ch;c++)sm+=data[c][idx];
+      acc+=sm/ch;
+    }
+    out[i]=acc/factor;
+  }
+  return {data:out,rate:sr/factor};
+}
+
+function onsetEnvelope(sig,fftSize,hop,rate){
+  const win=new Float32Array(fftSize);
+  for(let i=0;i<fftSize;i++)win[i]=.5-.5*Math.cos(2*Math.PI*i/(fftSize-1));
+  const frames=Math.max(0,Math.floor((sig.length-fftSize)/hop));
+  const env=new Float32Array(frames), low=new Float32Array(frames), half=fftSize>>1;
+  const prev=new Float32Array(half);
+  const re=new Float32Array(fftSize), im=new Float32Array(fftSize);
+  // A snare puts out more spectral flux than a kick, so the loudest onset is
+  // usually the BACKBEAT. The downbeat is marked by low end, so track the
+  // bottom of the spectrum separately and choose bar one from that.
+  const lowTop=Math.max(2,Math.min(half-1,Math.round(160/(rate/fftSize))));
+  for(let f=0;f<frames;f++){
+    const off=f*hop;
+    for(let i=0;i<fftSize;i++){re[i]=sig[off+i]*win[i];im[i]=0}
+    fft(re,im);
+    let flux=0, lf=0;
+    for(let k=0;k<half;k++){
+      const mag=Math.sqrt(re[k]*re[k]+im[k]*im[k]);
+      const d=mag-prev[k];
+      if(d>0){flux+=d; if(k>=1&&k<=lowTop)lf+=d}
+      prev[k]=mag;
+    }
+    env[f]=flux; low[f]=lf;
+  }
+  // Subtract a local mean and rectify: what matters is a spike ABOVE its
+  // neighbourhood, not absolute loudness, so quiet passages still count.
+  const norm=function(src){
+    const W=20, out=new Float32Array(src.length);
+    let mx=0;
+    for(let i=0;i<src.length;i++){
+      let sm=0,c=0;
+      for(let j=Math.max(0,i-W);j<=Math.min(src.length-1,i+W);j++){sm+=src[j];c++}
+      const v=src[i]-sm/c;
+      out[i]=v>0?v:0;
+      if(out[i]>mx)mx=out[i];
+    }
+    if(mx>0)for(let i=0;i<out.length;i++)out[i]/=mx;
+    return out;
+  };
+  return {full:norm(env),low:norm(low)};
+}
+
+function sampler(env){
+  const N=env.length;
+  return function(x){
+    if(x<0||x>=N-1)return 0;
+    const i=x|0, fr=x-i;
+    return env[i]*(1-fr)+env[i+1]*fr;
+  };
+}
+
+function coarsePeriod(env,fps){
+  const minLag=Math.max(2,Math.floor(fps*60/200)), maxLag=Math.ceil(fps*60/60);
+  let best=null;
+  for(let lag=minLag;lag<=maxLag;lag++){
+    let sm=0;
+    for(let i=0;i+lag<env.length;i++)sm+=env[i]*env[i+lag];
+    sm/=(env.length-lag);
+    const bpm=60*fps/lag;
+    // A log-normal prior around 120bpm: without it, autocorrelation happily
+    // locks onto half or double time.
+    const w=Math.exp(-.5*Math.pow(Math.log(bpm/120)/.55,2));
+    const score=sm*w;
+    if(!best||score>best.score)best={lag:lag,score:score};
+  }
+  return best?best.lag:0;
+}
+
+// Fit period and phase together against a comb of beat positions.
+function refineGrid(env,p0){
+  const at=sampler(env), N=env.length;
+  let best=null;
+  const lo=p0*.93, hi=p0*1.07, steps=260;
+  for(let si=0;si<=steps;si++){
+    const P=lo+(hi-lo)*si/steps;
+    const nOff=Math.max(8,Math.round(P*4));
+    for(let oi=0;oi<nOff;oi++){
+      const off=P*oi/nOff;
+      let sm=0,c=0;
+      for(let x=off;x<N-1;x+=P){sm+=at(x);c++}
+      if(c<4)continue;
+      const score=sm/c;
+      if(!best||score>best.score)best={period:P,offset:off,score:score};
+    }
+  }
+  return best;
+}
+
+function pickDownbeat(env,period,offset,bpb){
+  const at=sampler(env), N=env.length;
+  let best=null;
+  for(let b=0;b<bpb;b++){
+    const start=offset+b*period;
+    let sm=0,c=0;
+    for(let x=start;x<N-1;x+=period*bpb){sm+=at(x);c++}
+    if(c<2)continue;
+    const score=sm/c;
+    if(!best||score>best.score)best={beat:b,offset:start,score:score};
+  }
+  return best||{beat:0,offset:offset,score:0};
+}
+
+function analyseBuffer(buf,bpb){
+  const dec=monoDecimate(buf,11025);
+  const hop=128, fftSize=512;
+  const E=onsetEnvelope(dec.data,fftSize,hop,dec.rate);
+  const env=E.full;
+  if(env.length<40)return null;
+  const fps=dec.rate/hop;
+  const lag=coarsePeriod(env,fps);
+  if(!lag)return null;
+  const fine=refineGrid(env,lag);
+  if(!fine)return null;
+  const db=pickDownbeat(E.low,fine.period,fine.offset,bpb);
+  let mean=0;
+  for(let i=0;i<env.length;i++)mean+=env[i];
+  mean/=env.length;
+  // A frame's flux describes its whole window, so the onset it reports sits
+  // at the window centre, not its start. Without this every grid runs early.
+  const centre=(fftSize/2)/dec.rate;
+  return {bpm:60*fps/fine.period,
+          downbeat:db.offset/fps+centre,
+          period:fine.period/fps,
+          conf:mean>0?fine.score/mean:0};
+}
+
+/* ============================ SOUND ============================ */
+
+const AUD={ac:null,master:null,drone:null,notes:true,click:false,drone_on:false,vol:.7};
+const mtof=m=>440*Math.pow(2,(m-69)/12);
+
+function audio(){
+  if(!AUD.ac){
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)return null;
+    try{AUD.ac=new AC()}catch(e){return null}
+    AUD.master=AUD.ac.createGain();
+    AUD.master.gain.value=AUD.vol;
+    AUD.master.connect(AUD.ac.destination);
+  }
+  if(AUD.ac.state==="suspended")AUD.ac.resume();
+  return AUD.ac;
+}
+
+// Plucked string: bright transient that darkens as it decays.
+function pluck(midi,dur){
+  const ac=audio(); if(!ac)return;
+  const t=ac.currentTime+.001, f=mtof(midi);
+  const d=Math.max(.16,Math.min(dur*1.7,1.5));
+  const lp=ac.createBiquadFilter();
+  lp.type="lowpass"; lp.Q.value=.6;
+  lp.frequency.setValueAtTime(Math.min(9000,f*9),t);
+  lp.frequency.exponentialRampToValueAtTime(Math.max(350,f*2.2),t+d);
+  const g=ac.createGain();
+  g.gain.setValueAtTime(.0001,t);
+  g.gain.exponentialRampToValueAtTime(.42,t+.005);
+  g.gain.exponentialRampToValueAtTime(.0001,t+d);
+  const o1=ac.createOscillator(), o2=ac.createOscillator(), g2=ac.createGain();
+  o1.type="triangle"; o1.frequency.value=f;
+  o2.type="sawtooth"; o2.frequency.value=f; o2.detune.value=4; g2.gain.value=.3;
+  o1.connect(lp); o2.connect(g2); g2.connect(lp); lp.connect(g); g.connect(AUD.master);
+  o1.start(t); o2.start(t); o1.stop(t+d+.05); o2.stop(t+d+.05);
+}
+
+function tickSound(accent){
+  const ac=audio(); if(!ac)return;
+  const t=ac.currentTime+.001;
+  const o=ac.createOscillator(), g=ac.createGain();
+  o.type="square"; o.frequency.value=accent?1680:1080;
+  g.gain.setValueAtTime(.0001,t);
+  g.gain.exponentialRampToValueAtTime(accent?.2:.1,t+.001);
+  g.gain.exponentialRampToValueAtTime(.0001,t+.05);
+  o.connect(g); g.connect(AUD.master);
+  o.start(t); o.stop(t+.07);
+}
+
+function droneOff(){
+  if(!AUD.drone)return;
+  const ac=AUD.ac, d=AUD.drone; AUD.drone=null;
+  try{
+    d.g.gain.cancelScheduledValues(ac.currentTime);
+    d.g.gain.setValueAtTime(d.g.gain.value,ac.currentTime);
+    d.g.gain.linearRampToValueAtTime(0,ac.currentTime+.25);
+    d.oscs.forEach(function(o){o.stop(ac.currentTime+.3)});
+  }catch(e){}
+}
+function droneOn(){
+  const ac=audio(); if(!ac||!ctx)return;
+  droneOff();
+  const cc=S.chordInfo?S.chordInfo[curChord()].ctx:ctx;
+  const root=40+((((cc.rootPc-4)%12)+12)%12);       // lowest root at or above low E
+  const lp=ac.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=750;
+  const g=ac.createGain(); g.gain.value=0;
+  const oscs=[];
+  // Root and octave always. Third and fifth come from the chord itself, so a
+  // minor chord sounds minor and locrian never gets handed a perfect fifth.
+  const voices=[[0,.15,"sawtooth"],[12,.07,"sawtooth"]];
+  const fifth=cc.heptatonic?cc.semis[4]:(cc.semis.indexOf(7)>=0?7:null);
+  if(fifth!=null)voices.push([fifth,.085,"sine"]);
+  if(cc.heptatonic)voices.push([cc.semis[2]+12,.05,"sine"]);
+  voices.forEach(function(v){
+    const o=ac.createOscillator(), og=ac.createGain();
+    o.type=v[2]; o.frequency.value=mtof(root+v[0]); o.detune.value=(v[0]%5)*3-4;
+    og.gain.value=v[1];
+    o.connect(og); og.connect(lp); o.start(); oscs.push(o);
+  });
+  lp.connect(g); g.connect(AUD.master);
+  g.gain.linearRampToValueAtTime(.55,ac.currentTime+.4);
+  AUD.drone={g:g,oscs:oscs};
+}
+
+/* ============================ STATE ============================ */
+
+const S={
+  rootIdx:11, scaleKey:"mixolydian",
+  prog:"off", solo:"parallel", chordInfo:null, lastChord:0,
+  tab:null, tabOn:false, tabTranspose:0, tabFing:"written",
+  audioAnchor:0,
+  ptype:"tones", runLen:4, runDir:"down", startOn:"auto", endOn:"off",
+  ptrans:"exact", fitBars:false, beatsPerBar:4,
+  cmpMode:"off", cmpRootIdx:9,
+  tones:["1"], toneOrder:{"1":1},
+  dir:"up", appr:"none", apprScope:"group",
+  pos:"inpos", sset:"all", winLo:0, winSpan:5, octs:1,
+  showDeg:true, landing:false, onlyPat:false, loop:true,
+  bpm:72, subdiv:2,
+  seq:[], cur:-1, playing:false, timer:null, preset:null
+};
+
+const $=id=>document.getElementById(id);
+
+/* ============================ SEQUENCE ============================ */
+
+function scaleSemi(ctx,i){
+  const N=ctx.semis.length;
+  return ctx.semis[((i%N)+N)%N]+12*Math.floor(i/N);
+}
+
+// A group is either a stack of scale steps off the anchor (chord tones) or a
+// run of consecutive scale notes. Descending runs give the classic sequence
+// 7654 6543 5432 -- anchors walking down, each group falling four notes.
+function patternOffsets(){
+  if(S.ptype==="run"){
+    const out=[];
+    for(let i=0;i<S.runLen;i++)out.push(S.runDir==="down"?-i:i);
+    return out;
+  }
+  const OFF={"1":0,"2":1,"3":2,"4":3,"5":4,"6":5,"7":6};
+  return S.tones.map(function(t){return OFF[t]}).filter(function(o){return o!==undefined});
+}
+
+function buildSteps(ctx){
+  const N=ctx.semis.length;
+  const offs=patternOffsets();
+  if(!offs.length)return[];
+  const lift=Math.max(0,-Math.min.apply(null,offs));
+
+  let anchors=[];
+  for(let i=0;i<N*S.octs;i++)anchors.push(i+lift);
+  if(S.dir==="down")anchors.reverse();
+  if(S.dir==="updown")anchors=anchors.concat(anchors.slice(0,-1).reverse());
+
+  const steps=[];
+  anchors.forEach(function(a,gi){
+    offs.forEach(function(off,ti){
+      const idx=a+off, semi=scaleSemi(ctx,idx), di=((idx%N)+N)%N;
+      if(S.appr!=="none"&&(S.apprScope==="note"||ti===0)){
+        const d=S.appr==="above"?1:S.appr==="below"?-1:(gi%2?1:-1);
+        steps.push({semi:semi+d,role:"approach",group:gi,
+                    label:pcName(ctx.rootPc+semi+d)});
+      }
+      steps.push({semi:semi,role:off===0?"anchor":"tone",group:gi,di:di,
+                  label:S.showDeg?ctx.notes[di].label:ctx.notes[di].name,
+                  deg:ctx.notes[di].deg,pc:ctx.notes[di].pc,first:ti===0});
+    });
+  });
+  return steps;
+}
+
+function allowedStrings(){return STRINGSETS[S.sset]}
+
+/* --- Adaptive: the POSITION defines which notes exist; the pattern walks that
+   list. A "third" is two rungs up the ladder the hand can already reach, so
+   nothing can ever fall outside the box. --- */
+
+function positionNotes(ctx,winLo){
+  const lo=(winLo==null?S.winLo:winLo), hi=Math.min(FRETS,lo+S.winSpan), strs=allowedStrings();
+  const seen={}, out=[];
+  strs.forEach(function(s){
+    for(let f=lo;f<=hi;f++){
+      const midi=OPEN[s]+f, pc=((midi%12)+12)%12, di=ctx.pcs.indexOf(pc);
+      if(di<0||seen[midi])continue;
+      seen[midi]=1;
+      out.push({midi:midi,s:s,f:f,di:di});
+    }
+  });
+  out.sort(function(a,b){return a.midi-b.midi});
+  return out;
+}
+
+function buildAdaptive(ctx,winLo,anchorOnRoot){
+  const offs=patternOffsets();
+  const pn=positionNotes(ctx,winLo);
+  if(!offs.length||!pn.length)return[];
+
+  const maxOff=Math.max.apply(null,offs), minOff=Math.min.apply(null,offs);
+  let anchors=[];
+  for(let i=Math.max(0,-minOff);i+maxOff<pn.length;i++)anchors.push(i);
+  if(!anchors.length)return[];
+  if(S.dir==="down")anchors.reverse();
+
+  // Trim in play order so the FIRST note sounded is the one asked for. An
+  // explicit "start on" wins; otherwise a vamp starts each chord on its own
+  // root, so the drill outlines the chord instead of relabelling the box.
+  const want = S.startOn!=="auto"
+    ? function(a){return pn[a].di===+S.startOn}
+    : (anchorOnRoot ? function(a){return ((pn[a].midi%12)+12)%12===ctx.rootPc} : null);
+  if(want){
+    const k=anchors.findIndex(want);
+    if(k>0)anchors=anchors.slice(k);
+  }
+  if(S.dir==="updown")anchors=anchors.concat(anchors.slice(0,-1).reverse());
+
+  const steps=[];
+  anchors.forEach(function(a,gi){
+    offs.forEach(function(off,ti){
+      const n=pn[a+off];
+      if(!n)return;
+      if(S.appr!=="none"&&(S.apprScope==="note"||ti===0)){
+        // Fingered where a player actually takes it: same string, one fret off.
+        const d=S.appr==="above"?1:S.appr==="below"?-1:(gi%2?1:-1);
+        let af=n.f+d;
+        if(af<0||af>FRETS)af=n.f-d;
+        steps.push({role:"approach",group:gi,p:{s:n.s,f:af},midi:OPEN[n.s]+af,
+                    label:pcName(OPEN[n.s]+af)});
+      }
+      steps.push({role:off===0?"anchor":"tone",group:gi,p:{s:n.s,f:n.f},midi:n.midi,
+                  di:n.di,deg:ctx.notes[n.di].deg,pc:ctx.notes[n.di].pc,
+                  label:S.showDeg?ctx.notes[n.di].label:ctx.notes[n.di].name});
+    });
+  });
+  return steps;
+}
+
+/* --- Parallel: one shape, transposed. Leaving the window is the whole point,
+   so absolute pitch drives placement here and outside notes get flagged. --- */
+
+function placeParallel(steps,ctx,winLo){
+  if(!steps.length)return steps;
+  const lo=(winLo==null?S.winLo:winLo), hi=Math.min(FRETS,lo+S.winSpan), strs=allowedStrings();
+
+  function slots(midi,l,h){
+    const out=[];
+    strs.forEach(function(s){
+      const f=midi-OPEN[s];
+      if(f>=l&&f<=h&&f>=0&&f<=FRETS)out.push({s:s,f:f});
+    });
+    return out;
+  }
+  let base=null;
+  strs.forEach(function(s){
+    for(let f=lo;f<=hi;f++){
+      const m=OPEN[s]+f;
+      if(((m%12)+12)%12===ctx.rootPc&&(base===null||m<base))base=m;
+    }
+  });
+  if(base===null){
+    strs.forEach(function(s){
+      for(let f=0;f<=FRETS;f++){
+        const m=OPEN[s]+f;
+        if(((m%12)+12)%12===ctx.rootPc&&(base===null||m<base))base=m;
+      }
+    });
+  }
+  if(base===null)base=OPEN[strs[0]];
+  steps.forEach(function(st){st.midi=base+st.semi});
+
+  const g0id=steps[0].group, g0=steps.filter(function(s){return s.group===g0id});
+  let prev=null;
+  g0.forEach(function(st){
+    let c=slots(st.midi,lo,hi);
+    if(!c.length)c=slots(st.midi,Math.max(0,lo-4),Math.min(FRETS,hi+4));
+    if(!c.length)c=slots(st.midi,0,FRETS);
+    st.p=pick(c,prev);
+    if(st.p)prev=st.p;
+  });
+  const shape=g0.map(function(s){return s.p});
+
+  const firstOf={};
+  steps.forEach(function(st){if(firstOf[st.group]===undefined)firstOf[st.group]=st.midi});
+  const a0=firstOf[g0id];
+
+  let g=null,i=0;
+  steps.forEach(function(st){
+    if(st.group!==g){g=st.group;i=0}
+    const sh=shape[Math.min(i,shape.length-1)];
+    i++;
+    if(!sh){st.p=null;return}
+    let f=sh.f+(firstOf[g]-a0);
+    while(f>FRETS)f-=12;
+    while(f<0)f+=12;
+    st.p={s:sh.s,f:f};
+    st.midi=OPEN[sh.s]+f;
+    const pc=((st.midi%12)+12)%12, di=ctx.pcs.indexOf(pc);
+    st.outside = di<0 && st.role!=="approach";
+    if(st.role!=="approach"){
+      st.label = di>=0 ? (S.showDeg?ctx.notes[di].label:ctx.notes[di].name) : pcName(pc);
+    }
+  });
+  return steps;
+}
+
+function pick(cands,prev){
+  if(!cands.length)return null;
+  if(!prev)return cands.slice().sort((a,b)=>a.s-b.s||a.f-b.f)[0];
+  let best=null,bd=1e9;
+  cands.forEach(function(c){
+    const d=Math.abs(c.f-prev.f)+1.35*Math.abs(c.s-prev.s);
+    if(d<bd){bd=d;best=c}
+  });
+  return best;
+}
+const SHARPNM=["C","C\u266f","D","D\u266f","E","F","F\u266f","G","G\u266f","A","A\u266f","B"];
+const pcName=pc=>SHARPNM[((pc%12)+12)%12];
+
+/* ============================ RENDER ============================ */
+
+let ctx=null,cmpCtx=null,markers={};
+
+function renderBoard(){
+  const b=$("board");
+  b.setAttribute("viewBox","0 0 "+GEO.w+" "+GEO.h);
+  b.setAttribute("width",GEO.w); b.setAttribute("height",GEO.h);
+  let h="";
+
+  DOUBLE.concat(INLAY).forEach(function(f){
+    if(f>FRETS)return;
+    const x=lineX(f)-GEO.fw/2;
+    if(DOUBLE.indexOf(f)>=0){
+      h+='<circle class="inlay" cx="'+x+'" cy="'+(GEO.y0+GEO.sh*1.0)+'" r="5.5"/>';
+      h+='<circle class="inlay" cx="'+x+'" cy="'+(GEO.y0+GEO.sh*4.0)+'" r="5.5"/>';
+    }else{
+      h+='<circle class="inlay" cx="'+x+'" cy="'+(GEO.y0+GEO.sh*2.5)+'" r="5.5"/>';
+    }
+  });
+
+  for(let f=1;f<=FRETS;f++)
+    h+='<line class="fretline" x1="'+lineX(f)+'" y1="'+strY(5)+'" x2="'+lineX(f)+'" y2="'+strY(0)+'"/>';
+  h+='<rect class="nut" x="'+(GEO.x0-4)+'" y="'+(strY(5)-2)+'" width="4.5" height="'+(5*GEO.sh+4)+'" rx="1"/>';
+
+  for(let s=0;s<6;s++)
+    h+='<line class="stringline" x1="'+(GEO.x0-4)+'" y1="'+strY(s)+'" x2="'+lineX(FRETS)+'" y2="'+strY(s)+
+       '" stroke-width="'+(0.7+(5-s)*0.26).toFixed(2)+'"/>';
+
+  const ny=strY(0)+26;
+  for(let f=1;f<=FRETS;f++){
+    const mk=INLAY.concat(DOUBLE).indexOf(f)>=0;
+    h+='<text class="fretnum'+(mk?" mark":"")+'" x="'+(lineX(f)-GEO.fw/2)+'" y="'+ny+'" text-anchor="middle">'+f+'</text>';
+  }
+  h+='<text class="opennm" x="'+fretX(0)+'" y="'+ny+'" text-anchor="middle">open</text>';
+
+  h+='<g class="brk ghost off" id="brGhost"><rect></rect><text></text></g>';
+  h+='<g class="brk off" id="brNow"><rect></rect><text></text></g>';
+
+  markers={};
+  for(let s=0;s<6;s++)for(let f=0;f<=FRETS;f++){
+    const cx=fretX(f),cy=strY(s),id="n"+s+"_"+f;
+    h+='<g class="nd" id="'+id+'">'+
+         '<circle class="ring" cx="'+cx+'" cy="'+cy+'" r="14.5"/>'+
+         (f===0
+           ? '<rect class="bg" x="'+(cx-10)+'" y="'+(cy-10)+'" width="20" height="20" rx="4"/>'
+           : '<circle class="bg" cx="'+cx+'" cy="'+cy+'" r="11.5"/>')+
+         '<text class="tx" x="'+cx+'" y="'+(cy+0.5)+'"></text>'+
+       '</g>';
+  }
+  b.innerHTML=h;
+  for(let s=0;s<6;s++)for(let f=0;f<=FRETS;f++){
+    const g=document.getElementById("n"+s+"_"+f);
+    markers[s+"_"+f]={g:g,t:g.querySelector(".tx")};
+  }
+}
+
+function paint(){
+  // Under a vamp every reading is relative to the chord sounding now: the
+  // note pool never changes, only what each note MEANS over the chord.
+  const cc=curChord();
+  const pctx=S.chordInfo?S.chordInfo[cc].ctx:ctx;
+  const box=S.chordInfo?S.chordInfo[cc].lo:S.winLo;
+  const lo=box,hi=Math.min(FRETS,box+S.winSpan),strs=allowedStrings();
+  const inPat={};
+  S.seq.forEach(function(st){
+    if(!S.chordInfo||st.chord===cc)
+      (st.stack||(st.p?[st.p]:[])).forEach(function(n){inPat[n.s+"_"+n.f]=st});
+  });
+
+  for(let s=0;s<6;s++)for(let f=0;f<=FRETS;f++){
+    const key=s+"_"+f,m=markers[key],pc=((OPEN[s]+f)%12+12)%12;
+    const di=pctx.pcs.indexOf(pc);
+    const st=inPat[key];
+    const cls=["nd"];
+
+    if(di>=0){
+      const n=pctx.notes[di];
+      cls.push("inscale");
+      if(S.landing){
+        if(n.deg===1)cls.push("root");
+        else if(n.deg===3||n.deg===5)cls.push("ct");
+        else if(n.deg===2||n.deg===6)cls.push("hang");
+      }else{
+        if(n.deg===1)cls.push("root");
+        else if(n.deg===3||n.deg===5||n.deg===7)cls.push("ct");
+      }
+      m.t.textContent=S.showDeg?n.label:n.name;
+    }else{
+      m.t.textContent=S.showDeg?"":pcName(pc);
+    }
+
+    if(st&&st.outside){cls.push("outside");m.t.textContent=st.label}
+
+    if(cmpCtx){
+      const inA=di>=0,inB=cmpCtx.pcs.indexOf(pc)>=0;
+      if(inA&&!inB)cls.push("leave");
+      if(!inA&&inB){
+        cls.push("inscale","arrive");
+        const j=cmpCtx.pcs.indexOf(pc);
+        m.t.textContent=S.showDeg?cmpCtx.notes[j].label:cmpCtx.notes[j].name;
+      }
+      if(!inA&&!inB&&!st)cls.push("dimmed");
+    }else if(di<0&&!st){
+      cls.push("dimmed");
+    }
+
+    if(st)cls.push("instep");
+    if(S.onlyPat&&!st)cls.push("hidden");
+    if(!S.onlyPat&&(f<lo||f>hi||strs.indexOf(s)<0)&&S.seq.length)cls.push("dimmed");
+
+    m.g.setAttribute("class",cls.join(" "));
+  }
+  highlight();
+}
+
+function highlight(){
+  document.querySelectorAll(".nd.live").forEach(n=>n.classList.remove("live"));
+  document.querySelectorAll(".col.cur").forEach(n=>n.classList.remove("cur"));
+  const st=S.seq[S.cur];
+  if(st){
+    (st.stack||(st.p?[st.p]:[])).forEach(function(n,k){
+      const m=markers[n.s+"_"+n.f];
+      if(!m)return;
+      m.g.classList.remove("hidden");m.g.classList.remove("dimmed");m.g.classList.add("live");
+      if(k===0&&st.label)m.t.textContent=st.label;
+    });
+  }
+  const chip=document.querySelector('.col[data-i="'+S.cur+'"]');
+  if(chip){chip.classList.add("cur");
+    const box=$("steps"),l=chip.offsetLeft-box.offsetLeft;
+    if(l<box.scrollLeft||l>box.scrollLeft+box.clientWidth-60)box.scrollLeft=l-box.clientWidth/2;
+  }
+  $("counter").innerHTML="step <b>"+(S.cur>=0?S.cur+1:"\u2014")+"</b> / "+(S.seq.length||"\u2014");
+}
+
+function renderStrip(){
+  const names=["e","B","G","D","A","E"];              // top line = high E
+  $("gutter").innerHTML='<div class="gcell gdeg">deg</div>'+
+    names.map(function(n){return '<div class="gcell">'+n+"</div>"}).join("");
+
+  let h="",g=null,pch=null,barIdx=0;
+  const spb=S.beatsPerBar*S.subdiv;
+  S.seq.forEach(function(st,i){
+    const col=["col"];
+    if(st.group!==g){col.push("grp");g=st.group}
+    const ch=(st.chord!=null?st.chord:0);
+    if(ch!==pch)barIdx=0;
+    if(st.bar||(S.fitBars&&barIdx>0&&barIdx%spb===0))col.push("barline");
+    barIdx++;
+    if(pch!==null&&ch!==pch)col.push("chordstart");
+    pch=ch;
+    const chip=["chip"];
+    if(st.role==="approach")chip.push("approach");
+    else if(st.role==="anchor")chip.push("anchor");
+    if(st.outside)chip.push("outside");
+    let cells="";
+    const stk=st.stack||(st.p?[st.p]:[]);
+    for(let r=0;r<6;r++){
+      const str=5-r, hit=stk.filter(function(n){return n.s===str})[0];
+      cells+='<div class="cell">'+(hit?"<em>"+hit.f+"</em>":"")+"</div>";
+    }
+    h+='<div class="'+col.join(" ")+'" data-i="'+i+'" data-chord="'+ch+'">'+
+       '<div class="'+chip.join(" ")+'">'+(st.label||"")+"</div>"+cells+"</div>";
+  });
+  $("steps").innerHTML=h;
+  if(!S.seq.length){
+    $("gutter").innerHTML="";
+    $("steps").innerHTML='<div class="hint" style="padding:6px 2px">Pick at least one scale step.</div>';
+  }
+}
+
+function renderDerived(){
+  $("scaleRow").innerHTML=ctx.notes.map(function(n){
+    return '<div class="pitch'+(n.deg===1?" is-root":"")+'"><b>'+n.name+"</b><i>"+n.label+"</i></div>";
+  }).join("");
+  const ch=diatonic(ctx);
+  $("chordRow").innerHTML=ch.length
+    ? ch.map(function(c){
+        const on=S.tones.indexOf("7")>=0;
+        return '<div class="chip-chord'+(c.idx===0?" act":"")+'"><b>'+(on?c.sev:c.name)+"</b><span>"+c.roman+"</span></div>";
+      }).join("")
+    : '<div class="hint" style="padding:6px 2px">Pentatonic and blues scales don\u2019t stack into diatonic triads \u2014 switch to a seven-note scale to see the harmony.</div>';
+}
+
+function renderHinge(){
+  const card=$("hingeCard");
+  if(S.chordInfo){
+    card.hidden=false;
+    const A=S.chordInfo[0], B=S.chordInfo[1];
+    $("hingeTitle").textContent="How each note re-reads across the change";
+    $("hinge").innerHTML=ctx.notes.map(function(n){
+      const ia=A.ctx.pcs.indexOf(n.pc), ib=B.ctx.pcs.indexOf(n.pc);
+      const la=ia>=0?A.ctx.notes[ia].label:"-", lb=ib>=0?B.ctx.notes[ib].label:"-";
+      const ca=chordTone(A.ctx,n.pc), cb=chordTone(B.ctx,n.pc);
+      const tag=ca&&cb?"chord tone in both":ca?"leaves the chord":cb?"becomes a chord tone":"passing over both";
+      return '<div class="hrow"><b>'+n.name+'</b>'+
+        ' <span class="st">'+A.name+'</span> <em class="'+(ca?"ct":"")+'">'+la+'</em>'+
+        ' <span class="st">'+B.name+'</span> <em class="'+(cb?"ct":"")+'">'+lb+'</em>'+
+        ' <span class="'+((ca&&cb)?"st":"mv")+'">'+tag+'</span></div>';
+    }).join("");
+    return;
+  }
+  $("hingeTitle").textContent="What moves between the two";
+  if(!cmpCtx){card.hidden=true;return}
+  card.hidden=false;
+  const rows=[];
+  ctx.notes.forEach(function(n){
+    if(cmpCtx.pcs.indexOf(n.pc)>=0){
+      const j=cmpCtx.pcs.indexOf(n.pc);
+      rows.push('<div class="hrow"><span class="st">stays</span> <b>'+n.name+'</b> '+
+        '<span class="st">'+n.label+" in "+ctx.root.n+" \u2192 "+cmpCtx.notes[j].label+" in "+cmpCtx.root.n+"</span></div>");
+    }else{
+      // Prefer the note that genuinely ARRIVES in the target scale over one already
+      // common to both -- that is the note this one actually gives way to.
+      let tgt=null,dir=0,best=1e9;
+      [-1,1,-2,2].forEach(function(d){
+        const pc=((n.pc+d)%12+12)%12, j=cmpCtx.pcs.indexOf(pc);
+        if(j<0)return;
+        const score=(ctx.pcs.indexOf(pc)<0?0:10)+Math.abs(d);
+        if(score<best){best=score;tgt=cmpCtx.notes[j];dir=d}
+      });
+      rows.push('<div class="hrow"><span class="mv">moves</span> <b>'+n.name+"</b> \u2192 <em>"+
+        (tgt?tgt.name:"\u2014")+"</em> <span class=\"st\">"+n.label+" \u2192 "+(tgt?tgt.label:"?")+
+        (tgt?", "+(dir>0?"up ":"down ")+Math.abs(dir)+" fret"+(Math.abs(dir)>1?"s":""):"")+"</span></div>");
+    }
+  });
+  const arrivals=cmpCtx.notes.filter(n=>ctx.pcs.indexOf(n.pc)<0&&
+    !ctx.notes.some(x=>[1,-1,2,-2].some(d=>((x.pc+d)%12+12)%12===n.pc)));
+  arrivals.forEach(function(n){
+    rows.push('<div class="hrow"><span class="st">new</span> <b>'+n.name+'</b> <span class="st">'+n.label+" in "+cmpCtx.root.n+"</span></div>");
+  });
+  $("hinge").innerHTML=rows.join("");
+}
+
+/* ============================ PRESETS ============================ */
+
+const PRESETS=[
+  {id:"run",   n:"Scale run",              a:{ptype:"tones",tones:["1"],appr:"none",pos:"inpos",sset:"all",octs:2}},
+  {id:"th",    n:"Diatonic 3rds",          a:{ptype:"tones",tones:["1","3"],appr:"none",pos:"inpos",sset:"all",octs:2}},
+  {id:"tri",   n:"Triads up the scale",    a:{ptype:"tones",tones:["1","3","5"],appr:"none",pos:"inpos",sset:"all",octs:1}},
+  {id:"a357",  n:"3\u00b75\u00b77 off every note",   a:{ptype:"tones",tones:["3","5","7"],appr:"none",pos:"inpos",sset:"all",octs:1}},
+  {id:"a537",  n:"5\u00b73\u00b77 (reordered)",      a:{ptype:"tones",tones:["5","3","7"],appr:"none",pos:"inpos",sset:"all",octs:1}},
+  {id:"sev",   n:"7th arpeggios",          a:{ptype:"tones",tones:["1","3","5","7"],appr:"none",pos:"inpos",sset:"all",octs:1}},
+  {id:"chrom", n:"7ths, chromatic in",     a:{ptype:"tones",tones:["1","3","5","7"],appr:"below",apprScope:"group",pos:"inpos",octs:1}},
+  {id:"chall", n:"Chromatic every note",   a:{ptype:"tones",tones:["1","3","5"],appr:"alt",apprScope:"note",pos:"inpos",octs:1}},
+  {id:"t123",  n:"Triads on 1\u00b72\u00b73",        a:{ptype:"tones",tones:["1","3","5"],appr:"none",pos:"inpos",sset:"123",winLo:0,winSpan:12,octs:1}},
+  {id:"t234",  n:"Triads on 2\u00b73\u00b74",        a:{ptype:"tones",tones:["1","3","5"],appr:"none",pos:"inpos",sset:"234",winLo:0,winSpan:12,octs:1}},
+  {id:"t456",  n:"Triads on 4\u00b75\u00b76",        a:{ptype:"tones",tones:["1","3","5"],appr:"none",pos:"inpos",sset:"456",winLo:0,winSpan:12,octs:1}},
+  {id:"par",   n:"Parallel shape move",    a:{ptype:"tones",tones:["1","3","5"],appr:"none",pos:"shift",sset:"all",winSpan:5,octs:1}},
+  {id:"motif", n:"Motif \u00b7 5\u00b76\u00b71 cell",     a:{ptype:"tones",tones:["5","6","1"],appr:"none",pos:"inpos",octs:1}},
+  {id:"desc4", n:"Descending 4s \u00b7 7654 6543",  a:{ptype:"run",runLen:4,runDir:"down",dir:"down",appr:"none",pos:"inpos",octs:1}},
+  {id:"asc4",  n:"Ascending 4s \u00b7 1234 2345",   a:{ptype:"run",runLen:4,runDir:"up",dir:"up",appr:"none",pos:"inpos",octs:1}},
+  {id:"desc3", n:"Descending 3s \u00b7 765 654",    a:{ptype:"run",runLen:3,runDir:"down",dir:"down",appr:"none",pos:"inpos",octs:1}},
+  {id:"asc6",  n:"Ascending 6s",                a:{ptype:"run",runLen:6,runDir:"up",dir:"up",appr:"none",pos:"inpos",octs:1}},
+  {id:"desc4r",n:"Descending 4s, resolve to 1", a:{ptype:"run",runLen:4,runDir:"down",dir:"down",appr:"none",pos:"inpos",octs:1,endOn:"0"}}
+];
+
+/* ============================ RAIL SECTIONS ============================
+
+   Six cards outgrew the viewport, which pushed the fretboard off screen just
+   when you wanted to adjust something and watch it change. Each card folds
+   independently, remembers its state, and shows its current setting in the
+   header while closed -- so a closed rail still tells you how it is set. */
+
+const SEC_KEY="woodshed.sections";
+const SEC_DEFAULT={backingtrack:false,tab:false,drills:true,pattern:true,fingering:false,vamp:false,sound:false,display:false};
+
+function secState(){
+  try{
+    const raw=localStorage.getItem(SEC_KEY);
+    if(raw)return Object.assign({},SEC_DEFAULT,JSON.parse(raw));
+  }catch(e){}
+  // One column on a phone: any open section pushes the board off screen, so
+  // start everything folded and let the player open what they need.
+  if(window.innerWidth<1080){
+    const shut={};
+    Object.keys(SEC_DEFAULT).forEach(function(k){shut[k]=false});
+    return shut;
+  }
+  return Object.assign({},SEC_DEFAULT);
+}
+function secSave(){
+  try{
+    const o={};
+    document.querySelectorAll(".rail .card[data-sec]").forEach(function(c){
+      o[c.dataset.sec]=!c.classList.contains("closed");
+    });
+    localStorage.setItem(SEC_KEY,JSON.stringify(o));
+  }catch(e){}
+}
+
+function setupSections(){
+  const open=secState();
+  document.querySelectorAll(".rail .card").forEach(function(card,i){
+    const h=card.querySelector("h2");
+    if(!h)return;
+    const label=(h.textContent||("section "+i)).trim();
+    const key=label.toLowerCase().replace(/[^a-z]/g,"")||("sec"+i);
+    card.dataset.sec=key;
+
+    const body=document.createElement("div");
+    body.className="secBody";
+    while(h.nextSibling)body.appendChild(h.nextSibling);
+    card.appendChild(body);
+
+    h.textContent="";
+    const chev=document.createElement("span"); chev.className="chev"; chev.setAttribute("aria-hidden","true");
+    const lab=document.createElement("span"); lab.className="secLab"; lab.textContent=label;
+    const sum=document.createElement("span"); sum.className="secSum";
+    h.appendChild(chev); h.appendChild(lab); h.appendChild(sum);
+    h.setAttribute("role","button");
+    h.setAttribute("tabindex","0");
+
+    const isOpen=(key in open)?open[key]:true;
+    card.classList.toggle("closed",!isOpen);
+    h.setAttribute("aria-expanded",String(isOpen));
+
+    const toggle=function(){
+      const nowOpen=card.classList.contains("closed");
+      card.classList.toggle("closed",!nowOpen);
+      h.setAttribute("aria-expanded",String(nowOpen));
+      secSave();
+    };
+    h.addEventListener("click",toggle);
+    h.addEventListener("keydown",function(e){
+      if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle()}
+    });
+  });
+}
+
+// What each closed section is currently set to.
+function sectionSummaries(){
+  const put=function(k,v){
+    const c=document.querySelector('.rail .card[data-sec="'+k+'"] .secSum');
+    if(c)c.textContent=v;
+  };
+  const p=PRESETS.filter(function(x){return x.id===S.preset})[0];
+  put("drills",p?p.n.split(" \u00b7 ")[0]:"custom");
+  put("pattern",S.ptype==="run"
+      ? ("runs of "+S.runLen+(S.runDir==="down"?" down":" up"))
+      : S.tones.join("\u00b7"));
+  put("fingering",(S.pos==="shift"?"moving shape":"in position")+
+      " \u00b7 "+S.winLo+"-"+Math.min(FRETS,S.winLo+S.winSpan));
+  put("vamp",S.chordInfo?(PROGS[S.prog].n+" \u00b7 "+S.solo):"off");
+  const snd=[];
+  if(AUD.notes)snd.push("notes");
+  if(AUD.click)snd.push("click");
+  if(AUD.drone_on)snd.push("drone");
+  put("sound",snd.length?snd.join(" \u00b7 "):"silent");
+  put("display",S.showDeg?"degrees":"note names");
+  put("backingtrack",TRK.buffer?(Math.round(TRK.bpm*TRK.mult)+" bpm \u00b7 "+
+      (TRK.on?"on":"off")):"none");
+  put("tab",S.tab?((S.tabOn?"on":"off")+" \u00b7 "+S.tab.events.length+" steps"):"empty");
+}
+
+/* ============================ WIRING ============================ */
+
+function seg(id,key,after){
+  $(id).addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    this.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
+    S[key]=b.dataset.v; S.preset=null; renderPresets(); (after||rebuild)();
+  });
+}
+function setSeg(id,v){
+  $(id).querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+}
+
+function renderTones(){
+  const opts=["1","2","3","4","5","6","7"];
+  $("tones").innerHTML=opts.map(function(t){
+    const i=S.tones.indexOf(t);
+    return '<button class="tone'+(i>=0?" on":"")+'" data-t="'+t+'">'+t+
+           (i>=0?'<span class="ord">'+(i+1)+"</span>":"")+"</button>";
+  }).join("");
+  const seqTxt=S.tones.length?S.tones.join(" \u00b7 "):"none";
+  $("toneHint").innerHTML="Off each scale note, play <code>"+seqTxt+
+    "</code> \u2014 counted in scale steps from that note, so the quality follows the key. "+
+    "Click to add or drop. The small number is play order; clicking an already-active step sends it to the end.";
+}
+
+function syncPatternUI(){
+  const run=S.ptype==="run";
+  $("runCtl").hidden=!run;
+  $("toneCtl").hidden=run;
+  setSeg("ptype",S.ptype);
+  setSeg("runLen",String(S.runLen));
+  setSeg("runDir",S.runDir);
+  setSeg("ptrans",S.ptrans);
+  $("startOn").value=S.startOn;
+  $("endOn").value=S.endOn;
+  $("fitBars").checked=S.fitBars;
+  const bars=PROGS[S.prog].bars;
+  $("ptransCtl").hidden=(S.solo!=="parallel");
+  $("ptransHint").textContent = S.ptrans==="exact"
+    ? "The fingering is copied note for note, so notes outside the key come with it. Identical intervals on the new root."
+    : "The box still moves, but the notes are rebuilt from the chord -- a minor chord gets a minor arpeggio.";
+  if(run){
+    const seq=[];
+    for(let i=0;i<S.runLen;i++)seq.push(S.runDir==="down"?(7-i):(1+i));
+    const nx=seq.map(function(n){return ((n-1+(S.runDir==="down"?-1:1)+7)%7)+1});
+    $("runHint").textContent="Groups of "+S.runLen+" consecutive scale notes, "+
+      (S.runDir==="down"?"falling":"rising")+": "+seq.join("")+" "+nx.join("")+" ...";
+  }
+}
+function renderPresets(){
+  $("presets").innerHTML=PRESETS.map(p=>'<button class="preset'+(S.preset===p.id?" on":"")+
+    '" data-p="'+p.id+'">'+p.n+"</button>").join("");
+}
+
+function rebuild(){
+  ctx=buildContext(S.rootIdx,S.scaleKey);
+  cmpCtx = S.cmpMode==="off" ? null : buildContext(S.cmpRootIdx,S.cmpMode);
+  S.seq = buildSequence();
+  S.lastChord=curChord();
+
+  const adaptive=S.pos!=="shift";
+  $("octs").disabled=adaptive;
+  $("octLabel").textContent=adaptive?"Range":"Octaves";
+  $("octOut").textContent=adaptive
+    ? (positionNotes(ctx,S.winLo).length+" notes in box")
+    : String(S.octs);
+  if(adaptive&&!S.seq.length)
+    $("posHint").textContent="This box holds too few scale notes for that pattern \u2014 widen the span or move the window.";
+  if(S.cur>=S.seq.length)S.cur=-1;
+  renderDerived(); renderStrip(); paint(); renderHinge(); renderCaged();
+  paintBrackets(); renderRibbon();
+  $("cmpMode").disabled=!!S.chordInfo; $("cmpRoot").disabled=!!S.chordInfo;
+  sectionSummaries();
+}
+
+function tick(){
+  S.cur++;
+  if(S.cur>=S.seq.length){
+    if(!S.loop){stop();return}
+    S.cur=0;
+  }
+  const st=S.seq[S.cur];
+  syncChord(false);
+  highlight();
+  if(AUD.notes&&st){
+    const stk=st.stack||(st.midi!=null?[{midi:st.midi}]:[]);
+    stk.forEach(function(n){pluck(n.midi,msPerStep()/1000)});
+  }
+  if(AUD.click&&S.cur%S.subdiv===0)tickSound(S.cur===0);
+}
+function msPerStep(){return 60000/S.bpm/S.subdiv}
+
+// Every deadline is re-derived from a fixed origin rather than accumulated.
+// With a backing track that origin is the AUDIO clock, so the drill cannot
+// drift away from the record however long it runs.
+function dueMs(){
+  if(S.audioAnchor&&AUD.ac)
+    return (S.audioAnchor+S.n*msPerStep()/1000-AUD.ac.currentTime)*1000;
+  return S.t0+S.n*msPerStep()-performance.now();
+}
+function schedule(){
+  S.n++;
+  S.timer=setTimeout(function(){tick();schedule()},Math.max(0,dueMs()));
+}
+function resync(){
+  if(!S.playing)return;
+  clearTimeout(S.timer);
+  if(S.audioAnchor&&AUD.ac){
+    // keep the anchor, just work out which step is next
+    S.n=Math.max(0,Math.ceil((AUD.ac.currentTime-S.audioAnchor)/(msPerStep()/1000)));
+  }else{
+    S.t0=performance.now(); S.n=0;
+  }
+  schedule();
+}
+function trackStop(){
+  if(TRK.src){try{TRK.src.onended=null;TRK.src.stop()}catch(e){}TRK.src=null}
+  S.audioAnchor=0;
+}
+function trackStart(){
+  if(!TRK.on||!TRK.buffer)return;
+  const ac=audio();
+  if(!ac)return;
+  if(!TRK.gain){TRK.gain=ac.createGain();TRK.gain.connect(ac.destination)}
+  TRK.gain.gain.value=TRK.vol;
+  const startAt=ac.currentTime+.18;
+  TRK.src=ac.createBufferSource();
+  TRK.src.buffer=TRK.buffer;
+  TRK.src.connect(TRK.gain);
+  TRK.src.start(startAt,Math.max(0,TRK.downbeat));
+  TRK.src.onended=function(){if(S.playing)stop()};
+  S.audioAnchor=startAt;   // step 0 lands exactly on the downbeat
+}
+function play(){
+  if(!S.seq.length)return;
+  audio();
+  if(AUD.drone_on&&!AUD.drone)droneOn();
+  S.playing=true;
+  $("playIcon").setAttribute("d","M2.5 1.5 h4 v12 h-4 Z M8.5 1.5 h4 v12 h-4 Z");
+  clearTimeout(S.timer);
+  trackStop();
+  trackStart();
+  S.n=0;
+  if(S.audioAnchor&&AUD.ac){
+    S.timer=setTimeout(function(){tick();schedule()},
+                       Math.max(0,(S.audioAnchor-AUD.ac.currentTime)*1000));
+  }else{
+    S.t0=performance.now();
+    tick();
+    schedule();
+  }
+}
+function pause(){
+  S.playing=false; clearTimeout(S.timer);
+  trackStop();
+  droneOff();
+  $("playIcon").setAttribute("d","M3 1.5 L13 7.5 L3 13.5 Z");
+}
+function stop(){pause();S.cur=-1;highlight()}
+
+function init(){
+  ROOTS.forEach(function(r,i){
+    $("root").add(new Option(r.n,i));
+    $("cmpRoot").add(new Option(r.n,i));
+  });
+  Object.keys(SCALES).forEach(function(k){$("scale").add(new Option(SCALES[k].n,k))});
+  $("cmpMode").add(new Option("Off","off"));
+  Object.keys(SCALES).forEach(function(k){$("cmpMode").add(new Option(SCALES[k].n,k))});
+  $("root").value=S.rootIdx; $("scale").value=S.scaleKey;
+  $("cmpRoot").value=S.cmpRootIdx; $("cmpMode").value=S.cmpMode;
+
+  setupSections();
+  renderBoard(); renderTones(); renderPresets(); syncPatternUI();
+
+  $("root").addEventListener("change",function(){S.rootIdx=+this.value;rebuild();if(AUD.drone)droneOn()});
+  $("scale").addEventListener("change",function(){S.scaleKey=this.value;rebuild();if(AUD.drone)droneOn()});
+  $("cmpMode").addEventListener("change",function(){S.cmpMode=this.value;rebuild()});
+  $("cmpRoot").addEventListener("change",function(){S.cmpRootIdx=+this.value;rebuild()});
+
+  $("tones").addEventListener("click",function(e){
+    const b=e.target.closest(".tone"); if(!b)return;
+    const t=b.dataset.t,i=S.tones.indexOf(t);
+    if(i<0)S.tones.push(t);
+    else if(i===S.tones.length-1)S.tones.splice(i,1);
+    else{S.tones.splice(i,1);S.tones.push(t)}
+    S.preset=null; renderTones(); renderPresets(); rebuild();
+  });
+
+  seg("dir","dir"); seg("appr","appr"); seg("apprScope","apprScope");
+  seg("pos","pos",function(){
+    $("posHint").textContent = S.pos==="inpos"
+      ? "The box defines which notes exist and the pattern walks them, so nothing can land outside it. A 3rd is two rungs up the ladder your hand already reaches."
+      : "The first group\u2019s exact fingering is transposed for every later group. The shape survives \u2014 notes that fall outside the key are marked.";
+    rebuild();
+  });
+  seg("sset","sset");
+
+  function trkKey(f){return "woodshed.trk."+f.name+"."+f.size}
+  function trkApply(){
+    const on=!!TRK.buffer&&TRK.on;
+    S.bpm=on?Math.round(TRK.bpm*TRK.mult):S.bpm;
+    if(on){
+      $("bpm").value=Math.min(220,Math.max(30,S.bpm));
+      $("bpmOut").innerHTML="<b>"+S.bpm+"</b> bpm";
+    }
+    $("bpm").disabled=on;
+    const bar=60/Math.max(1,S.bpm)*S.beatsPerBar;
+    $("trkGrid").innerHTML = TRK.buffer
+      ? ("Beat every <code>"+(60/Math.max(1,S.bpm)).toFixed(3)+"s</code>, bar every <code>"+
+         bar.toFixed(2)+"s</code>. Playback starts on the downbeat at <code>"+
+         TRK.downbeat.toFixed(3)+"s</code>.")
+      : "";
+    sectionSummaries();
+  }
+  function trkReady(){
+    $("trkCtl").hidden=false;
+    const q=TRK.conf>=3?"clear":TRK.conf>=2?"usable":"shaky";
+    $("trkInfo").innerHTML="<b>"+TRK.name+"</b><br>"+Math.round(TRK.bpm)+
+      " bpm, downbeat "+TRK.downbeat.toFixed(2)+"s, beat is "+q+
+      (TRK.conf<2?" &#8212; nudge it if the click sits wrong.":".");
+    trkApply();
+    stop(); rebuild();
+  }
+  function loadTrack(file){
+    const ac=audio();
+    if(!ac){$("trkInfo").textContent="This browser has no Web Audio.";return}
+    $("trkInfo").textContent="Reading "+file.name+"...";
+    const fr=new FileReader();
+    fr.onerror=function(){$("trkInfo").textContent="Could not read that file."};
+    fr.onload=function(){
+      $("trkInfo").textContent="Decoding...";
+      ac.decodeAudioData(fr.result,function(buf){
+        TRK.buffer=buf; TRK.name=file.name; TRK.mult=1; setSeg("trkHalf","1");
+        let cached=null;
+        try{cached=JSON.parse(localStorage.getItem(trkKey(file))||"null")}catch(e){}
+        if(cached&&cached.bpm){
+          TRK.bpm=cached.bpm; TRK.downbeat=cached.downbeat; TRK.conf=cached.conf||0;
+          trkReady();
+          return;
+        }
+        $("trkInfo").textContent="Finding the beat in "+Math.round(buf.duration)+"s of audio...";
+        setTimeout(function(){          // let that paint before we block
+          const r=analyseBuffer(buf,S.beatsPerBar);
+          if(!r){$("trkInfo").textContent="Could not find a steady beat in that.";return}
+          TRK.bpm=r.bpm; TRK.downbeat=r.downbeat; TRK.conf=r.conf;
+          try{localStorage.setItem(trkKey(file),
+            JSON.stringify({bpm:r.bpm,downbeat:r.downbeat,conf:r.conf}))}catch(e){}
+          trkReady();
+        },30);
+      },function(){$("trkInfo").textContent="Could not decode that file."});
+    };
+    fr.readAsArrayBuffer(file);
+  }
+
+  $("trkPick").addEventListener("click",function(){$("trkFile").click()});
+  $("trkFile").addEventListener("change",function(){
+    if(this.files&&this.files[0])loadTrack(this.files[0]);
+  });
+  const dz=$("drop");
+  ["dragenter","dragover"].forEach(function(e){
+    dz.addEventListener(e,function(ev){ev.preventDefault();dz.classList.add("over")});
+  });
+  ["dragleave","drop"].forEach(function(e){
+    dz.addEventListener(e,function(ev){ev.preventDefault();dz.classList.remove("over")});
+  });
+  dz.addEventListener("drop",function(ev){
+    const f=ev.dataTransfer&&ev.dataTransfer.files&&ev.dataTransfer.files[0];
+    if(f)loadTrack(f);
+  });
+  $("trkOn").addEventListener("change",function(){
+    TRK.on=this.checked; trackStop(); trkApply();
+    if(S.playing){stop()}
+  });
+  $("trkVol").addEventListener("input",function(){
+    TRK.vol=+this.value/100; $("trkVolOut").textContent=this.value;
+    if(TRK.gain)TRK.gain.gain.value=TRK.vol;
+  });
+  $("trkNudge").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b||!TRK.buffer)return;
+    const v=parseFloat(b.dataset.v);
+    TRK.downbeat=Math.max(0,TRK.downbeat+(Math.abs(v)>=1?v*(60/Math.max(1,S.bpm)):v));
+    try{localStorage.setItem("woodshed.trk."+TRK.name+".nudge","1")}catch(e2){}
+    trkApply();
+    if(S.playing){stop();play()}
+  });
+  $("trkHalf").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    setSeg("trkHalf",b.dataset.v);
+    TRK.mult=parseFloat(b.dataset.v);
+    trkApply();
+    if(S.playing){stop();play()}
+  });
+
+  function tabInfo(){
+    const T=S.tab;
+    if(!T){$("tabInfo").textContent="Nothing loaded.";$("tabCtl").hidden=true;return}
+    const std=T.tuning.every(function(m,i){return m===OPEN[i]});
+    const names=T.tuning.map(function(m){return pcName(m)}).join(" ");
+    $("tabInfo").innerHTML=T.notes+" notes in "+T.events.length+" steps"+
+      (std?"":", tuning <code>"+names+"</code>")+".";
+    $("tabCtl").hidden=false;
+  }
+  function tabFingHint(){
+    $("tabFingHint").textContent = S.tabFing==="box"
+      ? "Every note is refingered inside the current box, folded by octaves where the written register will not fit -- the same move as taking a lick to another position."
+      : "Played on the strings and frets the tab specifies. Transposing slides the frets and wraps by an octave at the ends of the neck.";
+  }
+  $("tabLoad").addEventListener("click",function(){
+    const parsed=parseAsciiTab($("tabIn").value);
+    if(!parsed){
+      $("tabInfo").textContent="No tab found there. It needs six dashed lines, one per string.";
+      return;
+    }
+    S.tab=parsed; S.tabOn=true; $("tabOn").checked=true;
+    tabInfo(); stop(); rebuild();
+  });
+  $("tabClear").addEventListener("click",function(){
+    S.tab=null; S.tabOn=false; $("tabIn").value=""; $("tabOn").checked=false;
+    tabInfo(); stop(); rebuild();
+  });
+  $("tabOn").addEventListener("change",function(){S.tabOn=this.checked;stop();rebuild()});
+  $("tabTr").addEventListener("input",function(){
+    S.tabTranspose=+this.value;
+    $("tabTrOut").textContent=(S.tabTranspose>0?"+":"")+S.tabTranspose;
+    rebuild();
+  });
+  seg("tabFing","tabFing",function(){tabFingHint();rebuild()});
+  tabFingHint(); tabInfo();
+
+  seg("ptype","ptype",function(){syncPatternUI();rebuild()});
+  $("runLen").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    S.runLen=+b.dataset.v; S.preset=null; syncPatternUI(); renderPresets(); rebuild();
+  });
+  seg("runDir","runDir",function(){syncPatternUI();rebuild()});
+  seg("ptrans","ptrans",function(){syncPatternUI();rebuild()});
+
+  const degOpts=function(selEl,firstLabel,firstVal){
+    selEl.add(new Option(firstLabel,firstVal));
+    for(let i=0;i<7;i++)selEl.add(new Option("scale step "+(i+1),String(i)));
+  };
+  degOpts($("startOn"),"Lowest in the box","auto");
+  degOpts($("endOn"),"Don\u2019t resolve","off");
+  $("startOn").value=S.startOn; $("endOn").value=S.endOn;
+  $("startOn").addEventListener("change",function(){S.startOn=this.value;S.preset=null;renderPresets();rebuild()});
+  $("endOn").addEventListener("change",function(){S.endOn=this.value;S.preset=null;renderPresets();rebuild()});
+  $("fitBars").addEventListener("change",function(){S.fitBars=this.checked;rebuild()});
+
+  Object.keys(PROGS).forEach(function(k){$("prog").add(new Option(PROGS[k].n,k))});
+  $("prog").value=S.prog;
+  $("prog").addEventListener("change",function(){
+    S.prog=this.value; syncPatternUI(); rebuild(); if(AUD.drone)droneOn();
+  });
+  function soloHint(){
+    $("soloHint").textContent = S.solo==="parallel"
+      ? "The box travels to the new chord and you play the same shape. Identical intervals on a new root, so the ear hears the idea restated -- this is how Trey's sequences climb."
+      : "The box stays where it is and you re-target the new chord's tones from there. Connects across the bar line instead of announcing it -- Garcia's way.";
+  }
+  seg("solo","solo",function(){soloHint();syncPatternUI();rebuild();if(AUD.drone)droneOn()});
+  soloHint();
+
+  $("posHint").textContent="The box defines which notes exist and the pattern walks them, so nothing can land outside it. A 3rd is two rungs up the ladder your hand already reaches.";
+
+  function rng(id,key,fmt,out){
+    $(id).addEventListener("input",function(){
+      S[key]=+this.value; $(out).textContent=fmt(); S.preset=null; renderPresets();
+      if(id==="winLo"||id==="winSpan")$("winOut").textContent="frets "+S.winLo+"\u2013"+Math.min(FRETS,S.winLo+S.winSpan);
+      rebuild();
+    });
+  }
+  const winFmt=()=>"frets "+S.winLo+"\u2013"+Math.min(FRETS,S.winLo+S.winSpan);
+  rng("winLo","winLo",winFmt,"winOut");
+  rng("winSpan","winSpan",()=>"span "+S.winSpan,"spanOut");
+  rng("octs","octs",()=>String(S.octs),"octOut");
+  $("winOut").textContent=winFmt();
+
+  ["showDeg","landing","onlyPat"].forEach(function(id){
+    $(id).addEventListener("change",function(){S[id]=this.checked;rebuild()});
+  });
+  $("loopOn").addEventListener("change",function(){S.loop=this.checked});
+
+  $("bpm").addEventListener("input",function(){
+    S.bpm=+this.value; $("bpmOut").innerHTML="<b>"+S.bpm+"</b> bpm";
+    resync();
+  });
+  $("subdiv").addEventListener("change",function(){
+    S.subdiv=+this.value;
+    if(S.fitBars)rebuild();
+    resync();
+  });
+
+  $("play").addEventListener("click",function(){S.playing?pause():play()});
+  $("stop").addEventListener("click",stop);
+  document.addEventListener("keydown",function(e){
+    if(e.target.matches("input,select,button"))return;
+    if(e.code==="Space"){e.preventDefault();S.playing?pause():play()}
+    if(e.key==="Escape")stop();
+  });
+
+  $("caged").addEventListener("click",function(e){
+    const b=e.target.closest(".shape"); if(!b)return;
+    let lo=+b.dataset.lo;
+    const ci=curChord();
+    if(S.chordInfo&&S.solo==="parallel"&&ci>0)
+      lo-=nearestShift(S.chordInfo[ci].off-S.chordInfo[0].off);
+    const maxLo=+$("winLo").max;
+    while(lo<0)lo+=12;
+    while(lo>maxLo)lo-=12;              // only if a parallel shift overran
+    S.winLo=Math.max(0,lo); S.winSpan=CAGED_SPAN;
+    $("winLo").value=S.winLo; $("winSpan").value=S.winSpan;
+    $("winOut").textContent="frets "+S.winLo+"-"+Math.min(FRETS,S.winLo+S.winSpan);
+    $("spanOut").textContent="span "+S.winSpan;
+    rebuild();
+  });
+
+  $("sndNotes").addEventListener("change",function(){AUD.notes=this.checked;sectionSummaries()});
+  $("sndClick").addEventListener("change",function(){AUD.click=this.checked;sectionSummaries()});
+  $("sndDrone").addEventListener("change",function(){
+    AUD.drone_on=this.checked; sectionSummaries();
+    if(!this.checked)droneOff(); else if(S.playing)droneOn();
+  });
+  $("vol").addEventListener("input",function(){
+    AUD.vol=+this.value/100; $("volOut").textContent=this.value;
+    if(AUD.master)AUD.master.gain.value=AUD.vol;
+  });
+
+  $("presets").addEventListener("click",function(e){
+    const b=e.target.closest(".preset"); if(!b)return;
+    const p=PRESETS.find(x=>x.id===b.dataset.p); if(!p)return;
+    S.ptype="tones"; S.endOn="off"; S.startOn="auto"; S.dir="up";
+    Object.keys(p.a).forEach(function(k){S[k]=Array.isArray(p.a[k])?p.a[k].slice():p.a[k]});
+    S.preset=p.id;
+    syncPatternUI();
+    setSeg("appr",S.appr); setSeg("apprScope",S.apprScope); setSeg("dir",S.dir);
+    setSeg("pos",S.pos); setSeg("sset",S.sset); setSeg("dir",S.dir);
+    $("winLo").value=S.winLo; $("winSpan").value=S.winSpan; $("octs").value=S.octs;
+    $("winOut").textContent=winFmt(); $("spanOut").textContent="span "+S.winSpan; $("octOut").textContent=S.octs;
+    renderTones(); renderPresets(); stop(); rebuild();
+  });
+
+  $("steps").addEventListener("click",function(e){
+    const c=e.target.closest(".col"); if(!c)return;
+    pause(); S.cur=+c.dataset.i; syncChord(false); highlight();
+  });
+
+  rebuild();
+}
+
+init();
+})();
+</script>
