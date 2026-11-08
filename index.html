@@ -1250,9 +1250,8 @@ function buildSequence(){
 }
 
 function boxGeom(lo,sp){
-  const a=Math.max(0,lo-S.extDown), b=Math.min(FRETS,lo+sp+S.extUp);
-  const x=(a===0?GEO.x0-30:lineX(a-1));
-  return {x:x,w:Math.max(24,lineX(b)-x)};
+  const x=(lo===0?GEO.x0-30:lineX(lo-1));
+  return {x:x,w:Math.max(24,lineX(Math.min(FRETS,lo+sp))-x)};
 }
 function paintBrackets(){
   const nowG=document.getElementById("brNow"), ghG=document.getElementById("brGhost");
@@ -1623,7 +1622,7 @@ function ladderDi(ctx,i){
 function arpNotes(ctx,winLo){
   const want={};
   arpDegrees(ctx).forEach(function(d){want[d]=true});
-  return positionNotes(ctx,winLo).filter(function(n){return want[n.di]});
+  return positionNotes(ctx,winLo,function(d){return want[d]});
 }
 
 function patternOffsets(){
@@ -1677,26 +1676,33 @@ function allowedStrings(){return STRINGSETS[S.sset]}
    list. A "third" is two rungs up the ladder the hand can already reach, so
    nothing can ever fall outside the box. --- */
 
-// The box is where the hand sits; the extensions are how far it reaches
-// without moving. A root one fret below the box is still a root you can get.
-function boxRange(winLo){
-  const base=(winLo==null?S.winLo:winLo);
-  return {lo:Math.max(0,base-S.extDown),
-          hi:Math.min(FRETS,base+S.winSpan+S.extUp)};
-}
-function positionNotes(ctx,winLo){
-  const R=boxRange(winLo), lo=R.lo, hi=R.hi, strs=allowedStrings();
+// One pass over a fret range: each pitch once, low to high.
+function scanFrets(ctx,lo,hi,keep){
   const seen={}, out=[];
-  strs.forEach(function(s){
+  allowedStrings().forEach(function(s){
     for(let f=lo;f<=hi;f++){
       const midi=OPEN[s]+f, pc=((midi%12)+12)%12, di=ctx.pcs.indexOf(pc);
-      if(di<0||seen[midi])continue;
+      if(di<0||seen[midi]||(keep&&!keep(di)))continue;
       seen[midi]=1;
       out.push({midi:midi,s:s,f:f,di:di});
     }
   });
   out.sort(function(a,b){return a.midi-b.midi});
   return out;
+}
+// The box is where the hand sits. Reach adds to its two ends only: notes
+// pitched below its lowest note or above its highest, within that many frets
+// of the edge. Nothing in the middle of the box is refingered or added.
+function positionNotes(ctx,winLo,keep){
+  const base=(winLo==null?S.winLo:winLo), top=Math.min(FRETS,base+S.winSpan);
+  const core=scanFrets(ctx,base,top,keep);
+  if(!core.length)return core;
+  const low=core[0].midi, high=core[core.length-1].midi;
+  const below=S.extDown?scanFrets(ctx,Math.max(0,base-S.extDown),base-1,keep)
+                          .filter(function(n){return n.midi<low}):[];
+  const above=S.extUp?scanFrets(ctx,top+1,Math.min(FRETS,top+S.extUp),keep)
+                        .filter(function(n){return n.midi>high}):[];
+  return below.concat(core,above);
 }
 
 function buildAdaptive(ctx,winLo){
@@ -1892,7 +1898,7 @@ function paint(){
   const cc=curChord();
   const pctx=S.chordInfo?S.chordInfo[cc].ctx:ctx;
   const box=S.chordInfo?S.chordInfo[cc].lo:S.winLo;
-  const R=boxRange(box), lo=R.lo, hi=R.hi, strs=allowedStrings();
+  const lo=box, hi=Math.min(FRETS,box+S.winSpan), strs=allowedStrings();
   const inPat={};
   S.seq.forEach(function(st){
     if(!S.chordInfo||st.chord===cc)
@@ -1938,7 +1944,7 @@ function paint(){
 
     if(st)cls.push("instep");
     if(S.onlyPat&&!st)cls.push("hidden");
-    if(!S.onlyPat&&(f<lo||f>hi||strs.indexOf(s)<0)&&S.seq.length)cls.push("dimmed");
+    if(!S.onlyPat&&!st&&(f<lo||f>hi||strs.indexOf(s)<0)&&S.seq.length)cls.push("dimmed");
 
     m.g.setAttribute("class",cls.join(" "));
   }
@@ -2679,11 +2685,9 @@ function init(){
   rng("extDown","extDown",()=>"down "+S.extDown,"extDownOut");
   rng("extUp","extUp",()=>"up "+S.extUp,"extUpOut");
   function extHint(){
-    const R=boxRange(S.winLo);
     $("extHint").textContent = (S.extDown||S.extUp)
-      ? ("Playing frets "+R.lo+"-"+R.hi+", hand anchored on "+S.winLo+"-"+
-         Math.min(FRETS,S.winLo+S.winSpan)+". A reached note can start the pattern.")
-      : "Strictly inside the box. Reach a fret or two to catch a root that sits just outside it.";
+      ? "The box stays put. Adds only notes below its lowest note or above its highest, within this many frets of its edge."
+      : "Strictly inside the box. Reach a fret or two for a note just past its lowest or highest.";
   }
   ["extDown","extUp","winLo","winSpan"].forEach(function(id){
     $(id).addEventListener("input",extHint);
