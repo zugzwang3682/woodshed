@@ -2744,7 +2744,7 @@ function init(){
   $("presets").addEventListener("click",function(e){
     const b=e.target.closest(".preset"); if(!b)return;
     const p=PRESETS.find(x=>x.id===b.dataset.p); if(!p)return;
-    S.ptype="tones"; S.endOn="off"; S.startOn="auto"; S.dir="up"; S.arpRun=1;
+    S.ptype="tones"; S.endOn="off"; S.startOn="root"; S.dir="up"; S.arpRun=1;
     Object.keys(p.a).forEach(function(k){S[k]=Array.isArray(p.a[k])?p.a[k].slice():p.a[k]});
     S.preset=p.id;
     syncPatternUI();
