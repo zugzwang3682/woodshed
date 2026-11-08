@@ -532,6 +532,19 @@ svg.board{display:block}
           </div>
         </div>
         <div class="ctl">
+          <label for="extDown">Reach outside the box</label>
+          <div class="range">
+            <input type="range" id="extDown" min="0" max="5" value="0">
+            <output id="extDownOut">down 0</output>
+          </div>
+          <div class="range">
+            <input type="range" id="extUp" min="0" max="5" value="0">
+            <output id="extUpOut">up 0</output>
+          </div>
+          <p class="hint" id="extHint"></p>
+        </div>
+
+        <div class="ctl">
           <label for="octs" id="octLabel">Octaves</label>
           <div class="range">
             <input type="range" id="octs" min="1" max="3" value="1">
@@ -1187,17 +1200,17 @@ function tabSteps(){
 function buildSequence(){
   if(S.tabOn&&S.tab){S.chordInfo=null;return tabSteps()}
   computeChords();
-  const gen=function(cx,lo,onRoot){
+  const gen=function(cx,lo){
     return S.pos==="shift" ? placeParallel(buildSteps(cx),cx,lo)
-                           : buildAdaptive(cx,lo,onRoot);
+                           : buildAdaptive(cx,lo);
   };
-  if(!S.chordInfo)return appendResolve(gen(ctx,S.winLo,false),ctx,S.winLo);
+  if(!S.chordInfo)return appendResolve(gen(ctx,S.winLo),ctx,S.winLo);
 
   const bars=S.fitBars?currentProg().bars:null;
   const base=S.chordInfo[0];
   // The unfitted first chord is what a parallel transpose copies, so a chord
   // with a different bar count still gets the whole shape before trimming.
-  const firstRaw=appendResolve(gen(base.ctx,base.lo,true),base.ctx,base.lo);
+  const firstRaw=appendResolve(gen(base.ctx,base.lo),base.ctx,base.lo);
   let first=(bars?fitToBars(firstRaw,bars[0]):firstRaw);
   first.forEach(function(st){st.chord=0});
   const out=first.slice();
@@ -1227,7 +1240,7 @@ function buildSequence(){
     }else{
       // Re-derive in the new box so the arpeggio takes the chord's own
       // quality: a minor chord gets a minor arpeggio.
-      steps=appendResolve(gen(c.ctx,c.lo,true),c.ctx,c.lo);
+      steps=appendResolve(gen(c.ctx,c.lo),c.ctx,c.lo);
     }
     if(bars)steps=fitToBars(steps,bars[ci]);
     steps.forEach(function(st){st.chord=ci});
@@ -1237,8 +1250,9 @@ function buildSequence(){
 }
 
 function boxGeom(lo,sp){
-  const x=(lo===0?GEO.x0-30:lineX(lo-1));
-  return {x:x,w:Math.max(24,lineX(Math.min(FRETS,lo+sp))-x)};
+  const a=Math.max(0,lo-S.extDown), b=Math.min(FRETS,lo+sp+S.extUp);
+  const x=(a===0?GEO.x0-30:lineX(a-1));
+  return {x:x,w:Math.max(24,lineX(b)-x)};
 }
 function paintBrackets(){
   const nowG=document.getElementById("brNow"), ghG=document.getElementById("brGhost");
@@ -1553,7 +1567,8 @@ const S={
   tab:null, tabOn:false, tabTranspose:0, tabFing:"written",
   progText:"", custom:null, saved:{},
   audioAnchor:0,
-  ptype:"tones", runLen:4, runDir:"down", arpRun:1, startOn:"auto", endOn:"off",
+  ptype:"tones", runLen:4, runDir:"down", arpRun:1, startOn:"root", endOn:"off",
+  extDown:0, extUp:0,
   ptrans:"exact", fitBars:false, beatsPerBar:4,
   cmpMode:"off", cmpRootIdx:9,
   tones:["1"], toneOrder:{"1":1},
@@ -1662,8 +1677,15 @@ function allowedStrings(){return STRINGSETS[S.sset]}
    list. A "third" is two rungs up the ladder the hand can already reach, so
    nothing can ever fall outside the box. --- */
 
+// The box is where the hand sits; the extensions are how far it reaches
+// without moving. A root one fret below the box is still a root you can get.
+function boxRange(winLo){
+  const base=(winLo==null?S.winLo:winLo);
+  return {lo:Math.max(0,base-S.extDown),
+          hi:Math.min(FRETS,base+S.winSpan+S.extUp)};
+}
 function positionNotes(ctx,winLo){
-  const lo=(winLo==null?S.winLo:winLo), hi=Math.min(FRETS,lo+S.winSpan), strs=allowedStrings();
+  const R=boxRange(winLo), lo=R.lo, hi=R.hi, strs=allowedStrings();
   const seen={}, out=[];
   strs.forEach(function(s){
     for(let f=lo;f<=hi;f++){
@@ -1677,7 +1699,7 @@ function positionNotes(ctx,winLo){
   return out;
 }
 
-function buildAdaptive(ctx,winLo,anchorOnRoot){
+function buildAdaptive(ctx,winLo){
   const offs=patternOffsets();
   const pn=(S.ptype==="arp")?arpNotes(ctx,winLo):positionNotes(ctx,winLo);
   if(!offs.length||!pn.length)return[];
@@ -1691,9 +1713,13 @@ function buildAdaptive(ctx,winLo,anchorOnRoot){
   // Trim in play order so the FIRST note sounded is the one asked for. An
   // explicit "start on" wins; otherwise a vamp starts each chord on its own
   // root, so the drill outlines the chord instead of relabelling the box.
-  const want = S.startOn!=="auto"
-    ? function(a){return pn[a].di===+S.startOn}
-    : (anchorOnRoot ? function(a){return ((pn[a].midi%12)+12)%12===ctx.rootPc} : null);
+  // Three distinct answers, not two sharing one value. "low" trims nothing,
+  // so the pattern begins at whichever end the direction starts from --
+  // including an extended note. "root" means this chord's root. A number
+  // means that scale step, whatever it happens to be.
+  const want = S.startOn==="low" ? null
+    : S.startOn==="root" ? function(a){return ((pn[a].midi%12)+12)%12===ctx.rootPc}
+    : function(a){return pn[a].di===+S.startOn};
   if(want){
     const k=anchors.findIndex(want);
     if(k>0)anchors=anchors.slice(k);
@@ -1866,7 +1892,7 @@ function paint(){
   const cc=curChord();
   const pctx=S.chordInfo?S.chordInfo[cc].ctx:ctx;
   const box=S.chordInfo?S.chordInfo[cc].lo:S.winLo;
-  const lo=box,hi=Math.min(FRETS,box+S.winSpan),strs=allowedStrings();
+  const R=boxRange(box), lo=R.lo, hi=R.hi, strs=allowedStrings();
   const inPat={};
   S.seq.forEach(function(st){
     if(!S.chordInfo||st.chord===cc)
@@ -2195,7 +2221,9 @@ function syncPatternUI(){
   const run=S.ptype==="run", arp=S.ptype==="arp";
   $("runCtl").hidden=!run;
   $("arpCtl").hidden=!arp;
-  $("dirCtl").hidden=!(run||arp);
+  // A straight arpeggio has no group to reverse -- Direction already covers
+  // it, and leaving this showing made clicking Descending look broken.
+  $("dirCtl").hidden=!(run||(arp&&S.arpRun>1));
   $("toneCtl").hidden=run;            // arpeggio still needs its tones picked
   $("toneCtl").querySelector("label").textContent =
     arp?"Which chord tones make the arpeggio":"Scale steps off each note, in order";
@@ -2525,7 +2553,9 @@ function init(){
     selEl.add(new Option(firstLabel,firstVal));
     for(let i=0;i<7;i++)selEl.add(new Option("scale step "+(i+1),String(i)));
   };
-  degOpts($("startOn"),"Lowest in the box","auto");
+  $("startOn").add(new Option("Edge of the box","low"));
+  $("startOn").add(new Option("The chord root","root"));
+  for(let i=0;i<7;i++)$("startOn").add(new Option("scale step "+(i+1),String(i)));
   degOpts($("endOn"),"Don\u2019t resolve","off");
   $("startOn").value=S.startOn; $("endOn").value=S.endOn;
   $("startOn").addEventListener("change",function(){S.startOn=this.value;S.preset=null;renderPresets();rebuild()});
@@ -2646,6 +2676,19 @@ function init(){
   rng("winLo","winLo",winFmt,"winOut");
   rng("winSpan","winSpan",()=>"span "+S.winSpan,"spanOut");
   rng("octs","octs",()=>String(S.octs),"octOut");
+  rng("extDown","extDown",()=>"down "+S.extDown,"extDownOut");
+  rng("extUp","extUp",()=>"up "+S.extUp,"extUpOut");
+  function extHint(){
+    const R=boxRange(S.winLo);
+    $("extHint").textContent = (S.extDown||S.extUp)
+      ? ("Playing frets "+R.lo+"-"+R.hi+", hand anchored on "+S.winLo+"-"+
+         Math.min(FRETS,S.winLo+S.winSpan)+". A reached note can start the pattern.")
+      : "Strictly inside the box. Reach a fret or two to catch a root that sits just outside it.";
+  }
+  ["extDown","extUp","winLo","winSpan"].forEach(function(id){
+    $(id).addEventListener("input",extHint);
+  });
+  extHint();
   $("winOut").textContent=winFmt();
 
   ["showDeg","landing","onlyPat"].forEach(function(id){
