@@ -151,6 +151,12 @@ select{appearance:none;padding-right:26px;
 .tone .ord{position:absolute;top:2px;right:4px;font-size:9px;opacity:.85}
 .hint{font-size:11px;color:var(--ink3);line-height:1.5;margin:0}
 .hint code{font-family:var(--f-mono);font-size:10.5px;color:var(--ink2)}
+input[type=text]#progText,input[type=text]#progName{width:100%;min-width:0;background:var(--sunk);
+  color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:7px 9px;
+  font-family:var(--f-mono);font-size:11.5px}
+input[type=text]#progText:focus,input[type=text]#progName:focus{outline:none;border-color:var(--fretwire)}
+input[type=text]#progText::placeholder,input[type=text]#progName::placeholder{color:var(--ink3);opacity:.7}
+.hint b.bad{color:var(--rose);font-weight:500}
 textarea#tabIn{width:100%;resize:vertical;background:var(--sunk);color:var(--ink2);
   border:1px solid var(--line);border-radius:5px;padding:8px 9px;
   font-family:var(--f-mono);font-size:10.5px;line-height:1.45;white-space:pre;overflow-x:auto}
@@ -526,6 +532,18 @@ svg.board{display:block}
           <select id="prog"></select>
         </div>
         <div class="ctl">
+          <label for="progText">Chords and bars</label>
+          <input type="text" id="progText" spellcheck="false" placeholder="B:2 A:2">
+          <p class="hint" id="progHint"></p>
+        </div>
+        <div class="ctl">
+          <div class="tabrow">
+            <input type="text" id="progName" spellcheck="false" placeholder="Name it">
+            <button class="btn" id="progSave">Save</button>
+            <button class="btn" id="progDel">Delete</button>
+          </div>
+        </div>
+        <div class="ctl">
           <label>Over the changes</label>
           <div class="seg" id="solo">
             <button data-v="parallel" class="on">Parallel</button>
@@ -880,7 +898,67 @@ function windowFor(off,base){
   if(lo+S.winSpan>FRETS)lo-=12;
   return Math.max(0,Math.min(FRETS-S.winSpan,lo));
 }
-function progActive(){return S.prog!=="off"&&PROGS[S.prog].ch.length>1}
+/* ---- Writing a progression out by hand -------------------------------
+   The built-ins are intervals from the tonic, which is fine for "I - bVII"
+   and useless for typing an actual song. So: accept chord NAMES, measure
+   them against the first chord, and make that first chord the key. Change
+   Root afterwards and the whole thing transposes, the names following.
+
+     B B A A        one token per bar
+     B:2 A:2        the same thing, counted
+     B:2 E:2 | A E  bar lines are decoration, ignored
+     B:.5 A:.5      two chords inside one bar
+
+   Consecutive repeats merge: a chord lasting two bars is one chord for two
+   bars, and the hand should not jump at the halfway point.               */
+
+const NOTE_PC={c:0,d:2,e:4,f:5,g:7,a:9,b:11};
+function noteToPc(t){
+  const m=/^([a-gA-G])([#b]*)$/.exec(t);
+  if(!m)return null;
+  let pc=NOTE_PC[m[1].toLowerCase()];
+  for(let i=0;i<m[2].length;i++)pc+=(m[2].charAt(i)==="#")?1:-1;
+  return ((pc%12)+12)%12;
+}
+
+function parseProgression(text){
+  const toks=String(text||"").replace(/\|/g," ").split(/\s+/).filter(Boolean);
+  if(!toks.length)return{err:"",ch:[],bars:[]};
+  const raw=[], bad=[];
+  for(let i=0;i<toks.length;i++){
+    const m=/^([A-Ga-g][#b]*)([^:]*)(?::(\d*\.?\d+))?$/.exec(toks[i]);
+    const pc=m?noteToPc(m[1]):null;
+    if(pc===null){bad.push(toks[i]);continue}
+    const q=(m[2]||"").toLowerCase();
+    raw.push({pc:pc,
+              minor:/^(m|min|m7|min7|m9|m6|dim)$/.test(q),
+              bars:(m[3]&&parseFloat(m[3])>0)?parseFloat(m[3]):1});
+  }
+  if(bad.length)return{err:"Didn't recognise: "+bad.slice(0,3).join(", "),ch:[],bars:[]};
+  if(!raw.length)return{err:"No chords found.",ch:[],bars:[]};
+
+  const merged=[];
+  raw.forEach(function(c){
+    const last=merged[merged.length-1];
+    if(last&&last.pc===c.pc&&last.minor===c.minor)last.bars+=c.bars;
+    else merged.push({pc:c.pc,minor:c.minor,bars:c.bars});
+  });
+
+  const tonic=merged[0].pc;
+  return {err:"",tonic:tonic,
+          ch:merged.map(function(c){return(((c.pc-tonic)%12)+12)%12}),
+          bars:merged.map(function(c){return c.bars}),
+          minor:merged.map(function(c){return c.minor})};
+}
+
+// One place that answers "what progression is running", built-in or typed.
+function currentProg(){
+  if(S.prog==="custom"&&S.custom)return S.custom;
+  if(S.saved[S.prog])return S.saved[S.prog];
+  return PROGS[S.prog]||PROGS.off;
+}
+
+function progActive(){return S.prog!=="off"&&currentProg().ch.length>1}
 function curChord(){
   const st=S.seq[S.cur];
   return (st&&st.chord!=null)?st.chord:0;
@@ -893,11 +971,11 @@ function chordTone(cc,pc){
 }
 function computeChords(){
   if(!progActive()){S.chordInfo=null;return}
-  const chs=PROGS[S.prog].ch, base=chs[0], dia=diatonic(ctx);
+  const P=currentProg(), chs=P.ch, base=chs[0], dia=diatonic(ctx);
   const use7=S.tones.indexOf("7")>=0;
-  const info=chs.map(function(off){
+  const info=chs.map(function(off,ci){
     const pc=(((ctx.rootPc+off)%12)+12)%12, i=ctx.pcs.indexOf(pc);
-    const cc=chordCtxFor(off);
+    let cc=chordCtxFor(off);
     let name,roman;
     if(i>=0&&dia[i]){
       name=use7?dia[i].sev:dia[i].name; roman=dia[i].roman;
@@ -905,6 +983,14 @@ function computeChords(){
       const d2=cc?diatonic(cc):[];
       name=d2[0]?(use7?d2[0].sev:d2[0].name):(cc?cc.root.n:pcName(pc));
       roman=romanForOffset(off,d2[0]?d2[0].quality:"maj");
+    }
+    // Write Em and you get a minor chord, even in a key whose own harmony
+    // would have handed you E major. Dorian, not aeolian -- a minor chord
+    // inside a major-key jam almost always wants the natural 6.
+    if(P.minor&&P.minor[ci]&&cc&&cc.heptatonic&&cc.semis[2]===4){
+      const flat=ctx.notes.some(function(n){return n.name.indexOf("b")>=0});
+      const alt=buildContext(rootIdxForPc(pc,flat),"dorian");
+      if(alt){cc=alt;name=alt.root.n+"m";roman=romanForOffset(off,"min")}
     }
     return {off:off,idx:i,ctx:cc,lo:windowFor(off,base),
             name:name,roman:roman,borrowed:(i<0)};
@@ -1092,7 +1178,7 @@ function buildSequence(){
   };
   if(!S.chordInfo)return appendResolve(gen(ctx,S.winLo,false),ctx,S.winLo);
 
-  const bars=S.fitBars?PROGS[S.prog].bars:null;
+  const bars=S.fitBars?currentProg().bars:null;
   const base=S.chordInfo[0];
   // The unfitted first chord is what a parallel transpose copies, so a chord
   // with a different bar count still gets the whole shape before trimming.
@@ -1106,7 +1192,10 @@ function buildSequence(){
     let steps;
     if(S.solo==="parallel"&&S.ptrans==="exact"){
       // Move the hand and take what comes -- including notes outside the key.
-      const d=nearestShift(c.off-base.off);
+      // Use the delta the BOX actually moved, not the raw interval: windowFor
+      // bumps an octave when the shift would run off the nut, and wrapping
+      // each note independently would scatter them across both ends instead.
+      const d=c.lo-base.lo;
       steps=[];
       firstRaw.forEach(function(st){
         if(!st.p)return;
@@ -1164,7 +1253,8 @@ function renderRibbon(){
   if(!S.chordInfo){$("ribbon").innerHTML="";return}
   const ci=curChord();
   $("ribbon").innerHTML=S.chordInfo.map(function(c,i){
-    const bs=(S.fitBars&&PROGS[S.prog].bars)?(" &#183; "+PROGS[S.prog].bars[i]+"b"):"";
+    const PB=currentProg().bars;
+    const bs=(S.fitBars&&PB&&PB[i]!=null)?(" &#183; "+PB[i]+"b"):"";
     return '<div class="rchord'+(i===ci?" on":"")+(c.borrowed?" borrowed":"")+
            '" title="'+(c.borrowed?"Borrowed - root is outside the key":"")+
            '"><b>'+c.name+"</b><i>"+c.roman+bs+"</i></div>";
@@ -1446,6 +1536,7 @@ const S={
   rootIdx:11, scaleKey:"mixolydian",
   prog:"off", solo:"parallel", chordInfo:null, lastChord:0,
   tab:null, tabOn:false, tabTranspose:0, tabFing:"written",
+  progText:"", custom:null, saved:{},
   audioAnchor:0,
   ptype:"tones", runLen:4, runDir:"down", startOn:"auto", endOn:"off",
   ptrans:"exact", fitBars:false, beatsPerBar:4,
@@ -1998,7 +2089,7 @@ function sectionSummaries(){
       : S.tones.join("\u00b7"));
   put("fingering",(S.pos==="shift"?"moving shape":"in position")+
       " \u00b7 "+S.winLo+"-"+Math.min(FRETS,S.winLo+S.winSpan));
-  put("vamp",S.chordInfo?(PROGS[S.prog].n+" \u00b7 "+S.solo):"off");
+  put("vamp",S.chordInfo?(currentProg().n+" \u00b7 "+S.solo):"off");
   const snd=[];
   if(AUD.notes)snd.push("notes");
   if(AUD.click)snd.push("click");
@@ -2047,7 +2138,7 @@ function syncPatternUI(){
   $("startOn").value=S.startOn;
   $("endOn").value=S.endOn;
   $("fitBars").checked=S.fitBars;
-  const bars=PROGS[S.prog].bars;
+  const bars=currentProg().bars;
   $("ptransCtl").hidden=(S.solo!=="parallel");
   $("ptransHint").textContent = S.ptrans==="exact"
     ? "The fingering is copied note for note, so notes outside the key come with it. Identical intervals on the new root."
@@ -2359,10 +2450,98 @@ function init(){
   $("endOn").addEventListener("change",function(){S.endOn=this.value;S.preset=null;renderPresets();rebuild()});
   $("fitBars").addEventListener("change",function(){S.fitBars=this.checked;rebuild()});
 
-  Object.keys(PROGS).forEach(function(k){$("prog").add(new Option(PROGS[k].n,k))});
+  const SAVED_KEY="woodshed.progs";
+  function loadSaved(){
+    try{S.saved=JSON.parse(localStorage.getItem(SAVED_KEY)||"{}")||{}}catch(e){S.saved={}}
+  }
+  function storeSaved(){
+    try{localStorage.setItem(SAVED_KEY,JSON.stringify(S.saved))}catch(e){}
+  }
+  function fillProgs(){
+    const sel=$("prog"), keep=S.prog;
+    sel.innerHTML="";
+    Object.keys(PROGS).forEach(function(k){sel.add(new Option(PROGS[k].n,k))});
+    const mine=Object.keys(S.saved);
+    if(mine.length){
+      mine.sort().forEach(function(k){sel.add(new Option(S.saved[k].n||k,k))});
+    }
+    sel.add(new Option("Custom (type below)","custom"));
+    sel.value=keep;
+    if(sel.value!==keep)sel.value=S.prog="off";
+  }
+  function progToText(P){
+    if(!P||!P.ch||P.ch.length<2)return "";
+    return P.ch.map(function(off,i){
+      const pc=(((ctx.rootPc+off)%12)+12)%12;
+      const nm=pcName(pc)+((P.minor&&P.minor[i])?"m":"");
+      const b=P.bars?P.bars[i]:1;
+      return nm+(b===1?"":":"+b);
+    }).join(" ");
+  }
+  function showProg(){
+    const P=currentProg();
+    // Validate whatever is in the box regardless of which entry is selected:
+    // otherwise a typo leaves the previous progression quietly running.
+    const txt=$("progText").value.trim();
+    const parsed=txt?parseProgression(txt):null;
+    if(parsed&&parsed.err){
+      $("progHint").innerHTML='<b class="bad">'+parsed.err+"</b>";
+    }else if(P.ch&&P.ch.length>1){
+      const tot=(P.bars||[]).reduce(function(a,b){return a+b},0);
+      $("progHint").innerHTML=P.ch.length+" chords over "+tot+" bar"+(tot===1?"":"s")+
+        ". Chord changes land on the bar line, not on the end of the pattern.";
+    }else{
+      $("progHint").textContent="Type chord names. A bar each, or Bm:2 for two bars.";
+    }
+    sectionSummaries();
+  }
+  function applyCustom(setKey){
+    const p=parseProgression($("progText").value);
+    S.progText=$("progText").value;
+    if(p.err||p.ch.length<2){S.custom=null;showProg();rebuild();return}
+    // The first chord IS the key, so the typed names mean what they say.
+    if(setKey){
+      const want=rootIdxForPc(p.tonic,/b/.test($("progText").value));
+      if(want!=null&&want!==S.rootIdx){S.rootIdx=want;$("root").value=want}
+    }
+    S.custom={n:"Custom",ch:p.ch,bars:p.bars,minor:p.minor};
+    S.prog="custom"; $("prog").value="custom";
+    if(!S.fitBars){S.fitBars=true;$("fitBars").checked=true}  // bars are the point
+    showProg(); rebuild(); if(AUD.drone)droneOn();
+  }
+
+  loadSaved(); fillProgs();
   $("prog").value=S.prog;
   $("prog").addEventListener("change",function(){
-    S.prog=this.value; syncPatternUI(); rebuild(); if(AUD.drone)droneOn();
+    S.prog=this.value;
+    if(S.prog!=="custom"){
+      const P=currentProg();
+      if(S.saved[S.prog]){S.custom=null}
+      $("progText").value=progToText(P);
+      $("progName").value=S.saved[S.prog]?(S.saved[S.prog].n||""):"";
+      if(P.ch&&P.ch.length>1&&!S.fitBars){S.fitBars=true;$("fitBars").checked=true}
+    }
+    syncPatternUI(); showProg(); rebuild(); if(AUD.drone)droneOn();
+  });
+  $("progText").addEventListener("input",function(){applyCustom(false)});
+  $("progText").addEventListener("change",function(){applyCustom(true)});
+  $("progSave").addEventListener("click",function(){
+    const nm=$("progName").value.trim();
+    const p=parseProgression($("progText").value);
+    if(!nm||p.err||p.ch.length<2){
+      $("progHint").innerHTML='<b class="bad">'+(p.err||"Give it a name and at least two chords.")+"</b>";
+      return;
+    }
+    const key="my:"+nm.toLowerCase().replace(/[^a-z0-9]+/g,"-");
+    S.saved[key]={n:nm,ch:p.ch,bars:p.bars,minor:p.minor};
+    storeSaved(); S.prog=key; fillProgs(); $("prog").value=key;
+    showProg(); rebuild();
+  });
+  $("progDel").addEventListener("click",function(){
+    if(!S.saved[S.prog])return;
+    delete S.saved[S.prog]; storeSaved();
+    S.prog="off"; S.custom=null; fillProgs(); $("prog").value="off";
+    $("progName").value=""; showProg(); rebuild();
   });
   function soloHint(){
     $("soloHint").textContent = S.solo==="parallel"
@@ -2457,6 +2636,8 @@ function init(){
   });
 
   rebuild();
+  $("progText").value=progToText(currentProg());
+  showProg();
 }
 
 init();
