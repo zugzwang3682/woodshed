@@ -20,6 +20,7 @@
   --teal:#59B0A0;
   --rose:#CE5F72;
   --bone:#C3B9A7;
+  --inlay:#8A7F6C;
   --live:#FFD27A;
   --focus:#E9963F;
 
@@ -194,12 +195,12 @@ textarea#tabIn:focus{outline:none;border-color:var(--fretwire)}
 svg.board{display:block}
 
 .fretnum{font-family:var(--f-mono);font-size:10.5px;fill:var(--ink3)}
-.fretnum.mark{fill:var(--ink2)}
+.fretnum.mark{fill:var(--bone);font-weight:600}
 .opennm{font-family:var(--f-mono);font-size:10px;fill:var(--ink3)}
 .nut{fill:var(--bone)}
 .fretline{stroke:var(--fretwire);stroke-width:1.5}
 .stringline{stroke:var(--stringcol)}
-.inlay{fill:var(--line)}
+.inlay{fill:var(--inlay)}
 
 .nd{cursor:default}
 .nd .bg{fill:var(--panel2);stroke:var(--line);stroke-width:1}
@@ -1758,11 +1759,12 @@ function renderBoard(){
   DOUBLE.concat(INLAY).forEach(function(f){
     if(f>FRETS)return;
     const x=lineX(f)-GEO.fw/2;
+    // Sit them BETWEEN string rows: on a row, a note marker covers them.
     if(DOUBLE.indexOf(f)>=0){
-      h+='<circle class="inlay" cx="'+x+'" cy="'+(GEO.y0+GEO.sh*1.0)+'" r="5.5"/>';
-      h+='<circle class="inlay" cx="'+x+'" cy="'+(GEO.y0+GEO.sh*4.0)+'" r="5.5"/>';
+      h+='<circle class="inlay" cx="'+x+'" cy="'+(GEO.y0+GEO.sh*1.5)+'" r="6.5"/>';
+      h+='<circle class="inlay" cx="'+x+'" cy="'+(GEO.y0+GEO.sh*3.5)+'" r="6.5"/>';
     }else{
-      h+='<circle class="inlay" cx="'+x+'" cy="'+(GEO.y0+GEO.sh*2.5)+'" r="5.5"/>';
+      h+='<circle class="inlay" cx="'+x+'" cy="'+(GEO.y0+GEO.sh*2.5)+'" r="6.5"/>';
     }
   });
 
