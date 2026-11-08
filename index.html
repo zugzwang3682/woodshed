@@ -427,6 +427,7 @@ svg.board{display:block}
           <div class="seg" id="ptype">
             <button data-v="tones" class="on">Chord tones</button>
             <button data-v="run">Runs</button>
+            <button data-v="arp">Arpeggio</button>
           </div>
         </div>
 
@@ -436,6 +437,19 @@ svg.board{display:block}
             <button data-v="3">3</button><button data-v="4" class="on">4</button>
             <button data-v="5">5</button><button data-v="6">6</button>
           </div>
+        </div>
+
+        <div class="ctl" id="arpCtl" hidden>
+          <label>Shape</label>
+          <div class="seg" id="arpRun">
+            <button data-v="1" class="on">Straight</button>
+            <button data-v="3">3s</button>
+            <button data-v="4">4s</button>
+            <button data-v="5">5s</button>
+          </div>
+        </div>
+
+        <div class="ctl" id="dirCtl" hidden>
           <div class="seg" id="runDir">
             <button data-v="down" class="on">Descending</button>
             <button data-v="up">Ascending</button>
@@ -1539,7 +1553,7 @@ const S={
   tab:null, tabOn:false, tabTranspose:0, tabFing:"written",
   progText:"", custom:null, saved:{},
   audioAnchor:0,
-  ptype:"tones", runLen:4, runDir:"down", startOn:"auto", endOn:"off",
+  ptype:"tones", runLen:4, runDir:"down", arpRun:1, startOn:"auto", endOn:"off",
   ptrans:"exact", fitBars:false, beatsPerBar:4,
   cmpMode:"off", cmpRootIdx:9,
   tones:["1"], toneOrder:{"1":1},
@@ -1562,7 +1576,49 @@ function scaleSemi(ctx,i){
 // A group is either a stack of scale steps off the anchor (chord tones) or a
 // run of consecutive scale notes. Descending runs give the classic sequence
 // 7654 6543 5432 -- anchors walking down, each group falling four notes.
+/* An arpeggio drill walks a different LADDER. "Runs" steps through every
+   scale note; "Arpeggio" steps only through the chord's own tones, so over
+   B you get B D# F# and over A you get A C# E -- the chord outlined across
+   the box rather than the scale run through it. Groups of 3 or 4 then mean
+   three or four consecutive ARPEGGIO notes, not scale notes.            */
+function arpDegrees(ctx){
+  const OFF={"1":0,"2":1,"3":2,"4":3,"5":4,"6":5,"7":6};
+  const N=ctx.semis.length, set=[];
+  S.tones.map(function(t){return OFF[t]})
+         .filter(function(o){return o!==undefined})
+         .forEach(function(o){
+           const d=((o%N)+N)%N;
+           if(set.indexOf(d)<0)set.push(d);
+         });
+  set.sort(function(a,b){return a-b});
+  return set.length?set:[0];
+}
+function ladderSemi(ctx,i){
+  if(S.ptype!=="arp")return scaleSemi(ctx,i);
+  const d=arpDegrees(ctx), M=d.length;
+  return ctx.semis[d[((i%M)+M)%M]]+12*Math.floor(i/M);
+}
+function ladderDi(ctx,i){
+  const N=ctx.semis.length;
+  if(S.ptype!=="arp")return((i%N)+N)%N;
+  const d=arpDegrees(ctx), M=d.length;
+  return d[((i%M)+M)%M];
+}
+// The box, filtered to just this chord's arpeggio tones.
+function arpNotes(ctx,winLo){
+  const want={};
+  arpDegrees(ctx).forEach(function(d){want[d]=true});
+  return positionNotes(ctx,winLo).filter(function(n){return want[n.di]});
+}
+
 function patternOffsets(){
+  if(S.ptype==="arp"){
+    const n=S.arpRun;
+    if(n<=1)return[0];
+    const out=[];
+    for(let i=0;i<n;i++)out.push(S.runDir==="down"?-i:i);
+    return out;
+  }
   if(S.ptype==="run"){
     const out=[];
     for(let i=0;i<S.runLen;i++)out.push(S.runDir==="down"?-i:i);
@@ -1586,7 +1642,7 @@ function buildSteps(ctx){
   const steps=[];
   anchors.forEach(function(a,gi){
     offs.forEach(function(off,ti){
-      const idx=a+off, semi=scaleSemi(ctx,idx), di=((idx%N)+N)%N;
+      const idx=a+off, semi=ladderSemi(ctx,idx), di=ladderDi(ctx,idx);
       if(S.appr!=="none"&&(S.apprScope==="note"||ti===0)){
         const d=S.appr==="above"?1:S.appr==="below"?-1:(gi%2?1:-1);
         steps.push({semi:semi+d,role:"approach",group:gi,
@@ -1623,7 +1679,7 @@ function positionNotes(ctx,winLo){
 
 function buildAdaptive(ctx,winLo,anchorOnRoot){
   const offs=patternOffsets();
-  const pn=positionNotes(ctx,winLo);
+  const pn=(S.ptype==="arp")?arpNotes(ctx,winLo):positionNotes(ctx,winLo);
   if(!offs.length||!pn.length)return[];
 
   const maxOff=Math.max.apply(null,offs), minOff=Math.min.apply(null,offs);
@@ -2002,7 +2058,11 @@ const PRESETS=[
   {id:"asc4",  n:"Ascending 4s \u00b7 1234 2345",   a:{ptype:"run",runLen:4,runDir:"up",dir:"up",appr:"none",pos:"inpos",octs:1}},
   {id:"desc3", n:"Descending 3s \u00b7 765 654",    a:{ptype:"run",runLen:3,runDir:"down",dir:"down",appr:"none",pos:"inpos",octs:1}},
   {id:"asc6",  n:"Ascending 6s",                a:{ptype:"run",runLen:6,runDir:"up",dir:"up",appr:"none",pos:"inpos",octs:1}},
-  {id:"desc4r",n:"Descending 4s, resolve to 1", a:{ptype:"run",runLen:4,runDir:"down",dir:"down",appr:"none",pos:"inpos",octs:1,endOn:"0"}}
+  {id:"desc4r",n:"Descending 4s, resolve to 1", a:{ptype:"run",runLen:4,runDir:"down",dir:"down",appr:"none",pos:"inpos",octs:1,endOn:"0"}},
+  {id:"arpUp",  n:"Root arpeggio",              a:{ptype:"arp",tones:["1","3","5"],arpRun:1,dir:"up",runDir:"up",appr:"none",pos:"inpos",octs:1}},
+  {id:"arp7Up", n:"Root 7th arpeggio",          a:{ptype:"arp",tones:["1","3","5","7"],arpRun:1,dir:"up",runDir:"up",appr:"none",pos:"inpos",octs:1}},
+  {id:"arp3",   n:"Arpeggio in 3s",             a:{ptype:"arp",tones:["1","3","5"],arpRun:3,runDir:"up",dir:"up",appr:"none",pos:"inpos",octs:1}},
+  {id:"arp4d",  n:"7th arpeggio in 4s, down",   a:{ptype:"arp",tones:["1","3","5","7"],arpRun:4,runDir:"down",dir:"down",appr:"none",pos:"inpos",octs:1}}
 ];
 
 /* ============================ RAIL SECTIONS ============================
@@ -2088,6 +2148,8 @@ function sectionSummaries(){
   put("drills",p?p.n.split(" \u00b7 ")[0]:"custom");
   put("pattern",S.ptype==="run"
       ? ("runs of "+S.runLen+(S.runDir==="down"?" down":" up"))
+      : S.ptype==="arp"
+      ? ("arp "+S.tones.join("\u00b7")+(S.arpRun>1?" in "+S.arpRun+"s":""))
       : S.tones.join("\u00b7"));
   put("fingering",(S.pos==="shift"?"moving shape":"in position")+
       " \u00b7 "+S.winLo+"-"+Math.min(FRETS,S.winLo+S.winSpan));
@@ -2130,11 +2192,16 @@ function renderTones(){
 }
 
 function syncPatternUI(){
-  const run=S.ptype==="run";
+  const run=S.ptype==="run", arp=S.ptype==="arp";
   $("runCtl").hidden=!run;
-  $("toneCtl").hidden=run;
+  $("arpCtl").hidden=!arp;
+  $("dirCtl").hidden=!(run||arp);
+  $("toneCtl").hidden=run;            // arpeggio still needs its tones picked
+  $("toneCtl").querySelector("label").textContent =
+    arp?"Which chord tones make the arpeggio":"Scale steps off each note, in order";
   setSeg("ptype",S.ptype);
   setSeg("runLen",String(S.runLen));
+  setSeg("arpRun",String(S.arpRun));
   setSeg("runDir",S.runDir);
   setSeg("ptrans",S.ptrans);
   $("startOn").value=S.startOn;
@@ -2151,6 +2218,12 @@ function syncPatternUI(){
     const nx=seq.map(function(n){return ((n-1+(S.runDir==="down"?-1:1)+7)%7)+1});
     $("runHint").textContent="Groups of "+S.runLen+" consecutive scale notes, "+
       (S.runDir==="down"?"falling":"rising")+": "+seq.join("")+" "+nx.join("")+" ...";
+  }else if(arp){
+    const t=S.tones.join("-");
+    $("runHint").textContent = S.arpRun<=1
+      ? ("The "+t+" arpeggio of each chord, straight through the box. Over a vamp that means B's arpeggio for B's bars, then A's for A's.")
+      : ("Groups of "+S.arpRun+" consecutive arpeggio tones ("+t+"), "+
+         (S.runDir==="down"?"falling":"rising")+" -- the chord outlined, not the scale run.");
   }
 }
 function renderPresets(){
@@ -2433,7 +2506,14 @@ function init(){
   seg("tabFing","tabFing",function(){tabFingHint();rebuild()});
   tabFingHint(); tabInfo();
 
-  seg("ptype","ptype",function(){syncPatternUI();rebuild()});
+  seg("ptype","ptype",function(){
+    if(S.ptype==="arp"&&S.tones.length<2){S.tones=["1","3","5"];renderTones()}
+    syncPatternUI(); rebuild();
+  });
+  $("arpRun").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    S.arpRun=+b.dataset.v; S.preset=null; syncPatternUI(); renderPresets(); rebuild();
+  });
   $("runLen").addEventListener("click",function(e){
     const b=e.target.closest("button"); if(!b)return;
     S.runLen=+b.dataset.v; S.preset=null; syncPatternUI(); renderPresets(); rebuild();
@@ -2621,7 +2701,7 @@ function init(){
   $("presets").addEventListener("click",function(e){
     const b=e.target.closest(".preset"); if(!b)return;
     const p=PRESETS.find(x=>x.id===b.dataset.p); if(!p)return;
-    S.ptype="tones"; S.endOn="off"; S.startOn="auto"; S.dir="up";
+    S.ptype="tones"; S.endOn="off"; S.startOn="auto"; S.dir="up"; S.arpRun=1;
     Object.keys(p.a).forEach(function(k){S[k]=Array.isArray(p.a[k])?p.a[k].slice():p.a[k]});
     S.preset=p.id;
     syncPatternUI();
